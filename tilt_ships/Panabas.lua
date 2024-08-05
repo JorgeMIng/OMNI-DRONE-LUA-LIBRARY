@@ -129,7 +129,7 @@ function Panabas:overrideShipFrameCustomProtocols()
 	end
 end
 
-Panabas.blade_mode = false --remote; reinitialize PIDs when toggling this
+Panabas.blade_mode = false
 Panabas.axe_mode = true
 function Panabas:overrideInitDynamicControllers()
 	local panabas = self
