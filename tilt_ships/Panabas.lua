@@ -116,13 +116,19 @@ function Panabas:overrideShipFrameCustomProtocols()
 			["axe_mode"]= function (args)
 				panabas.axe_mode = not panabas.axe_mode
 			end,
-			["move"]= function (vec)
-				print("moving",textutils.serialise(vec))
-				vec = vector.new(vec.x,vec.y,vec.z)
-				local global_vec = self.ship_rotation:rotateVector3(vec)*30
-				panabas.global_velocity_offset = global_vec
+			["move"]= function (arg)
+				print("linear moving",textutils.serialise(arg.linear))
+				local linear_move = vector.new(arg.linear.x,arg.linear.y,arg.linear.z)
+				local global_linear_move = self.ship_rotation:rotateVector3(linear_move)*30
+				panabas.global_velocity_offset = global_linear_move
+
+				print("angular moving",textutils.serialise(arg.angular))
+				local angle = vector.new(arg.angular.x,arg.angular.y,arg.angular.z)
+				local angle = angle * 10
+				panabas.rotation_offset = angle
 
 			end,
+
 			default = function ( )
 				print(textutils.serialize(command)) 
 				print("Panabas: default case executed")
@@ -136,6 +142,7 @@ function Panabas:overrideShipFrameCustomProtocols()
 	end
 end
 Panabas.global_velocity_offset = vector.new(0,0,0)
+Panabas.rotation_offset = vector.new(0,0,0)
 Panabas.blade_mode = false
 Panabas.axe_mode = true
 function Panabas:overrideInitDynamicControllers()
@@ -187,28 +194,28 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 			self.error
 		]]--
 		self.target_global_velocity = vector.new(0,0,0)
-		if (self.remoteControlManager.rc_variables.run_mode) then
-			local target_orbit = self.sensors.orbitTargeting:getTargetSpatials()
-			
-			local target_orbit_position = target_orbit.position
-			local target_orbit_orientation = target_orbit.orientation
-			if(panabas.blade_mode) then
-				local point = panabas.axe_mode and 1 or -1
-				--self:debugProbe({axe_mode=panabas.axe_mode})
-				self.target_rotation = quaternion.fromToRotation(self.target_rotation:localPositiveY()*point,target_orbit_orientation:localPositiveZ())*self.target_rotation
-			end
-			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
-			--self:debugProbe({formation_position=formation_position})
-			self.target_global_position = formation_position + target_orbit_position
-			
-			self:debugProbe({ship_global_velocity=self.ship_global_velocity,global_velocity_offset=panabas.global_velocity_offset})
-			self.target_global_velocity = panabas.global_velocity_offset
-			
-		else
-			self.target_rotation = quaternion.new(1,0,0,0)
-		end
 		
-		--self:debugProbe({ship_global_velocity=self.ship_global_velocity})
+		if (self.remoteControlManager.rc_variables.run_mode) then
+			return
+		end
+
+		local target_orbit = self.sensors.orbitTargeting:getTargetSpatials()
+		
+		local target_orbit_position = target_orbit.position
+		local target_orbit_orientation = target_orbit.orientation
+		if(panabas.blade_mode) then
+			local point = panabas.axe_mode and 1 or -1
+			self.target_rotation = quaternion.fromToRotation(self.target_rotation:localPositiveY()*point,target_orbit_orientation:localPositiveZ())*self.target_rotation
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.rotation_offset.y)*self.target_rotation
+			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
+			self.target_global_position = formation_position + target_orbit_position
+		else
+			self:debugProbe({ship_global_velocity=self.ship_global_velocity,global_velocity_offset=panabas.global_velocity_offset})
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveX(),panabas.rotation_offset.x)*self.target_rotation
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.rotation_offset.y)*self.target_rotation
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveZ(),panabas.rotation_offset.z)*self.target_rotation
+			self.target_global_velocity = panabas.global_velocity_offset
+		end
 	end
 end
 
