@@ -111,7 +111,7 @@ function Panabas:overrideShipFrameCustomProtocols()
 		{
 			["blade_mode"]= function (args)
 				panabas.blade_mode = not panabas.blade_mode
-				self.ShipFrame:initDynamicControllers()
+				self:initDynamicControllers()
 			end,
 			["axe_mode"]= function (args)
 				panabas.axe_mode = not panabas.axe_mode
@@ -186,8 +186,8 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 			local target_orbit_position = target_orbit.position
 			local target_orbit_orientation = target_orbit.orientation
 
-			local point = self.axe_mode and 1 or -1
-
+			local point = panabas.axe_mode and 1 or -1
+			self:debugProbe({axe_mode=panabas.axe_mode})
 			self.target_rotation = quaternion.fromToRotation(self.target_rotation:localPositiveY()*point,target_orbit_orientation:localPositiveZ())*self.target_rotation
 
 			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
@@ -200,7 +200,7 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 			self.target_rotation = quaternion.new(1,0,0,0)
 		end
 		panabas.global_velocity_offset = vector.new(0,0,0)
-		self:debugProbe({ship_global_velocity=self.ship_global_velocity})
+		--self:debugProbe({ship_global_velocity=self.ship_global_velocity})
 	end
 end
 
