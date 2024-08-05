@@ -111,6 +111,7 @@ function Panabas:overrideShipFrameCustomProtocols()
 		{
 			["blade_mode"]= function (args)
 				panabas.blade_mode = not panabas.blade_mode
+				self.ShipFrame:initDynamicControllers()
 			end,
 			["axe_mode"]= function (args)
 				panabas.axe_mode = not panabas.axe_mode
