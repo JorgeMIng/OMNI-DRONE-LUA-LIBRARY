@@ -89,15 +89,11 @@ function Panabas:overrideShipFrameCustomProtocols()
 			end,
 			["move"]= function (arg)
 				print("linear moving",textutils.serialise(arg.linear))
-				local linear_move = vector.new(arg.linear.x,arg.linear.y,arg.linear.z)
-				local global_linear_move = self.ship_rotation:rotateVector3(linear_move)*30
-				panabas.global_velocity_offset = global_linear_move
+				panabas.remote_move_linear = vector.new(arg.linear.x,arg.linear.y,arg.linear.z)
 
 				print("angular moving",textutils.serialise(arg.angular))
 				local angle = vector.new(arg.angular.x,arg.angular.y,arg.angular.z)
-				local angle = angle * 10
-				panabas.rotation_offset = angle
-
+				panabas.remote_move_angular = angle
 			end,
 
 			default = function ( )
@@ -112,10 +108,11 @@ function Panabas:overrideShipFrameCustomProtocols()
 		end
 	end
 end
-Panabas.global_velocity_offset = vector.new(0,0,0)
-Panabas.rotation_offset = vector.new(0,0,0)
-Panabas.blade_mode = false
+Panabas.remote_move_linear = vector.new(0,0,0)
+Panabas.remote_move_angular = vector.new(0,0,0)
 Panabas.axe_mode = true
+Panabas.blade_mode = false
+Panabas.defensePose = false
 function Panabas:overrideInitDynamicControllers()
 	local panabas = self
 	function self.ShipFrame:initDynamicControllers()
@@ -154,6 +151,45 @@ function Panabas:overrideCalculateDynamicControlValues()
 	end
 end
 
+function Panabas:pointBlade(direction,args)
+	local target_rotation = args.target_rotation
+	local target_orbit_orientation = args.target_orbit_orientation
+	local remote_move_angular = args.remote_move_angular
+	local point = args.point
+	target_rotation = target_orbit_orientation
+	target_rotation = quaternion.fromToRotation(target_rotation:localPositiveY()*point,direction)*target_rotation
+	if(remote_move_angular.y>0)then
+		self.bladeTwistPose = math.fmod(self.bladeTwistPose+1,4)
+	elseif(remote_move_angular.y<0)then
+		self.bladeTwistPose = math.fmod(self.bladeTwistPose-1,4)
+	end
+	target_rotation = quaternion.fromRotation(target_rotation:localPositiveY(),self.bladeTwistPose*90)*target_rotation
+	return target_rotation
+end
+
+Panabas.bladeTwistPose = 0
+
+function Panabas:poseBlade(key,args)
+	local pose={
+		["point"]=function(args)
+			local target_orbit_orientation = args.target_orbit_orientation
+			return self:pointBlade(target_orbit_orientation:localPositiveZ(),args)
+		end,
+		["guard"]=function(args)
+			local target_orbit_orientation = args.target_orbit_orientation
+			return self:pointBlade(target_orbit_orientation:localPositiveX(),args)
+		end,
+	}
+	if pose[key] then
+		return pose[key](args)
+	end
+end
+
+
+function Panabas:safetyOn(active)
+	redstone.setOutput("top",active)
+end
+
 function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 	local panabas = self
 	function self.ShipFrame:customFlightLoopBehavior(customFlightVariables)
@@ -165,8 +201,10 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 			self.error
 		]]--
 		self.target_global_velocity = vector.new(0,0,0)
-
-		if (self.remoteControlManager.rc_variables.run_mode) then
+		
+		if (not self.remoteControlManager.rc_variables.run_mode) then
+			panabas:safetyOn(true)
+			
 			return
 		end
 
@@ -175,17 +213,35 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 		local target_orbit_position = target_orbit.position
 		local target_orbit_orientation = target_orbit.orientation
 		if(panabas.blade_mode) then
+			
+			panabas:safetyOn(not panabas.axe_mode)
+
 			local point = panabas.axe_mode and 1 or -1
-			self.target_rotation = quaternion.fromToRotation(self.target_rotation:localPositiveY()*point,target_orbit_orientation:localPositiveZ())*self.target_rotation
-			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.rotation_offset.y)*self.target_rotation
+			local blade_pose_arguments = {	target_rotation=self.target_rotation,
+											target_orbit_orientation=target_orbit_orientation,
+											point=point,
+											remote_move_angular=panabas.remote_move_angular}
+			
+			if(panabas.remote_move_linear.x<0)then --"keys.w"
+				self.defensePose = false
+			elseif(panabas.remote_move_linear.x>0)then--"keys.s"
+				self.defensePose = true
+			end
+			if(self.defensePose) then
+				self.target_rotation = panabas:poseBlade("guard",blade_pose_arguments)
+			else
+				self.target_rotation = panabas:poseBlade("point",blade_pose_arguments)
+			end
+
 			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
 			self.target_global_position = formation_position + target_orbit_position
 		else
-			self:debugProbe({ship_global_velocity=self.ship_global_velocity,global_velocity_offset=panabas.global_velocity_offset})
-			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveX(),panabas.rotation_offset.x)*self.target_rotation
-			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.rotation_offset.y)*self.target_rotation
-			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveZ(),panabas.rotation_offset.z)*self.target_rotation
-			self.target_global_velocity = panabas.global_velocity_offset
+			panabas:safetyOn(false)
+			panabas.remote_move_angular = panabas.remote_move_angular * 10
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveX(),panabas.remote_move_angular.x)*self.target_rotation
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.remote_move_angular.y)*self.target_rotation
+			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveZ(),panabas.remote_move_angular.z)*self.target_rotation
+			self.target_global_velocity = self.ship_rotation:rotateVector3(panabas.remote_move_linear)*30
 		end
 	end
 end
