@@ -306,7 +306,7 @@ function DroneBaseClassSP:calculateMovement()
 	local customFlightVariables = self:customPreFlightLoopVariables()
 	
 	while self.run_firmware do
-		if(self.ship_mass ~= ship.getMass()) then
+		if(self.ship_mass ~= self.sensors.shipReader.getMass()) then
 			self:initFlightConstants()
 		end
 		self:customFlightLoopBehavior(customFlightVariables)
