@@ -6,7 +6,7 @@ local quaternion = require "lib.quaternions"
 local getLocalPositionError = flight_utilities.getLocalPositionError
 local clamp_vector3 = utilities.clamp_vector3
 
-shipControl=peripheral.find("shipControlInterface")
+shipControl=peripheral.find("ShipControlInterface")
 
 
 local DroneBaseClassKontraption = DroneBaseClassSP:subclass()
@@ -41,18 +41,18 @@ function DroneBaseClassKontraption:init(instance_configs)
 	DroneBaseClassKontraption.superClass.init(self,configs)
 end
 
-function DroneBaseClassKontraption:initDynamicControllers()
+function DroneBaseClassKontraption:initFeedbackControllers()
     self.pos_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.POS.P,
                                                         self.ship_constants.PID_SETTINGS.POS.I,
                                                         self.ship_constants.PID_SETTINGS.POS.D,
                                                         -1,1)
 end
 
-function DroneBaseClassKontraption:calculateDynamicControlValueError()
+function DroneBaseClassKontraption:calculateFeedbackControlValueError()
 	return 	{pos=getLocalPositionError(self.target_global_position,self.ship_global_position,self.ship_rotation)}
 end
 
-function DroneBaseClassKontraption:calculateDynamicControlValues(error)
+function DroneBaseClassKontraption:calculateFeedbackControlValues(error)
 	return 	self.pos_PID:run(error.pos)
 end
 
@@ -94,7 +94,7 @@ end
 
 function DroneBaseClassKontraption:calculateMovement()
     self:initFlightConstants()
-    self:initDynamicControllers()
+    self:initFeedbackControllers()
     self:customPreFlightLoopBehavior()
     local customFlightVariables = self:customPreFlightLoopVariables()
 
@@ -116,9 +116,9 @@ function DroneBaseClassKontraption:calculateMovement()
         self.ship_global_velocity = self.sensors.shipReader:getVelocity()
 		self.ship_global_velocity = vector.new(self.ship_global_velocity.x,self.ship_global_velocity.y,self.ship_global_velocity.z)
         --self:debugProbe({ship_global_velocity=self.ship_global_velocity})
-        self.error = self:calculateDynamicControlValueError()
+        self.error = self:calculateFeedbackControlValueError()
         
-        local pid_local_linear_power_percentage = self:calculateDynamicControlValues(self.error)
+        local pid_local_linear_power_percentage = self:calculateFeedbackControlValues(self.error)
         
         local local_gravity_acceleration = self.ship_rotation:inv():rotateVector3(self.gravity_acceleration_vector)
 
