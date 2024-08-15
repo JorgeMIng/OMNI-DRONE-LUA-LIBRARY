@@ -88,7 +88,7 @@ function ImmortalShipBase:overrideShipFrameCustomProtocols()
 		{
 			["blade_mode"]= function (args)
 				ImmortalShipBase.blade_mode = not ImmortalShipBase.blade_mode
-				self:initDynamicControllers()
+				self:InitFeedbackControllers()
 			end,
 			["axe_mode"]= function (args)
 				ImmortalShipBase.axe_mode = not ImmortalShipBase.axe_mode
@@ -119,9 +119,9 @@ ImmortalShipBase.remote_move_angular = vector.new(0,0,0)
 ImmortalShipBase.axe_mode = true
 ImmortalShipBase.blade_mode = false
 ImmortalShipBase.defensePose = false
-function ImmortalShipBase:overrideInitDynamicControllers()
+function ImmortalShipBase:overrideInitFeedbackControllers()
 	local ImmortalShipBase = self
-	function self.ShipFrame:initDynamicControllers()
+	function self.ShipFrame:initFeedbackControllers()
 		if(ImmortalShipBase.blade_mode) then
 			self.lateral_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.POS.P,
 																	self.ship_constants.PID_SETTINGS.POS.I,
@@ -134,12 +134,13 @@ function ImmortalShipBase:overrideInitDynamicControllers()
 																self.ship_constants.PID_SETTINGS.VEL.I,
 																self.ship_constants.PID_SETTINGS.VEL.D,
 																-1,1)
+		print(self.lateral_PID.p,self.lateral_PID.i,self.lateral_PID.d)
 	end
 end
 
-function ImmortalShipBase:overrideCalculateDynamicControlValueError()
+function ImmortalShipBase:overrideCalculateFeedbackControlValueError()
 	local ImmortalShipBase = self
-	function self.ShipFrame:calculateDynamicControlValueError()
+	function self.ShipFrame:calculateFeedbackControlValueError()
 		local target_value = self.target_global_velocity
 		local measured_value = self.ship_global_velocity
 		if(ImmortalShipBase.blade_mode) then
@@ -150,9 +151,9 @@ function ImmortalShipBase:overrideCalculateDynamicControlValueError()
 	end
 end
 
-function ImmortalShipBase:overrideCalculateDynamicControlValues()
+function ImmortalShipBase:overrideCalculateFeedbackControlValues()
 	local ImmortalShipBase = self
-	function self.ShipFrame:calculateDynamicControlValues(error)
+	function self.ShipFrame:calculateFeedbackControlValues(error)
 		return 	self.lateral_PID:run(error)
 	end
 end
@@ -213,7 +214,7 @@ function ImmortalShipBase:overrideShipFrameCustomFlightLoopBehavior()
 			
 			return
 		end
-
+		
 		local target_orbit = self.sensors.orbitTargeting:getTargetSpatials()
 		
 		local target_orbit_position = target_orbit.position
@@ -255,9 +256,9 @@ end
 function ImmortalShipBase:init(instance_configs)
 	self:initializeShipFrameClass(instance_configs)
 
-	self:overrideInitDynamicControllers()
-	self:overrideCalculateDynamicControlValueError()
-	self:overrideCalculateDynamicControlValues()
+	self:overrideInitFeedbackControllers()
+	self:overrideCalculateFeedbackControlValueError()
+	self:overrideCalculateFeedbackControlValues()
 
 	self:overrideShipFrameCustomProtocols()
 	self:overrideShipFrameGetCustomSettings()
