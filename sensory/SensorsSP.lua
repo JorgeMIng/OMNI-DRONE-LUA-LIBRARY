@@ -21,10 +21,14 @@ function SensorsSP:init(configs)
 	SensorsSP.superClass.init(self)
 	
 	--self.shipReader = ShipReaderSP()
-	self.shipReader = ShipReader()
+	self.shipReader = self:initShipReader(configs)
 	self.radar = SomePeripheralsRadar()
 	self.goggle = SomePeripheralsGoggle(configs)
 
+end
+
+function SensorsSP:initShipReader(configs)
+	return ShipReader()
 end
 
 function SensorsSP:getInertiaTensors()
