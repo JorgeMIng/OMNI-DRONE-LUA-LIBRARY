@@ -280,7 +280,7 @@ function DroneBaseClass:initConstants(ship_constants_config)
 
 		DRONE_ID = 0,
 		DRONE_TYPE = "DEFAULT",
-		DEFAULT_NEW_LOCAL_SHIP_ORIENTATION = quaternion.new(1,0,0,0), --based on static ship world orientation (rotated from how it was built in the world grid)
+		DEFAULT_NEW_LOCAL_SHIP_ORIENTATION = self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0)), --based on static ship world orientation (rotated from how it was built in the world grid)
 		
 		--make sure to check the VS2-Tournament mod config
 		MOD_CONFIGURED_THRUSTER_SPEED = 10000,

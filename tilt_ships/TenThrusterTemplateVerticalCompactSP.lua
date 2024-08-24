@@ -80,9 +80,6 @@ function TenThrusterTemplateVerticalCompactSP:init(instance_configs)
 	
 	configs.ship_constants_config = configs.ship_constants_config or {}
 	
-	--configs.ship_constants_config.DEFAULT_NEW_LOCAL_SHIP_ORIENTATION = quaternion.fromRotation(vector.new(0,1,0), 45)-----------------------
-	configs.ship_constants_config.DEFAULT_NEW_LOCAL_SHIP_ORIENTATION = self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0))
-	
 	configs.ship_constants_config.MOD_CONFIGURED_THRUSTER_SPEED = configs.ship_constants_config.MOD_CONFIGURED_THRUSTER_SPEED or 10000-----------------------
 	
 	configs.ship_constants_config.THRUSTER_TIER = configs.ship_constants_config.THRUSTER_TIER or 2-----------------------

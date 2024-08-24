@@ -273,12 +273,13 @@ function DroneBaseClassSP:initFlightConstants()
 		else
 			torque_saturation_table.neg.y = torque_saturation_table.neg.y + max_thruster_torque_vector.y
 		end
-
+		
 		if(max_thruster_torque_vector.z>0) then
 			torque_saturation_table.pos.z = torque_saturation_table.pos.z + max_thruster_torque_vector.z
 		else
 			torque_saturation_table.neg.z = torque_saturation_table.neg.z + max_thruster_torque_vector.z
 		end
+
 	end
 
 	max_linear_acceleration.pos = force_saturation_table.pos/ship_mass
