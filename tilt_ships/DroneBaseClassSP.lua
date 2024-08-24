@@ -245,33 +245,40 @@ function DroneBaseClassSP:initFlightConstants()
 		local max_thruster_force_vector = new_min_dir*max_thruster_force
 		if(max_thruster_force_vector.x>0) then
 			force_saturation_table.pos.x = force_saturation_table.pos.x + max_thruster_force_vector.x
-		elseif(max_thruster_force_vector.x<0) then
+		else
 			force_saturation_table.neg.x = force_saturation_table.neg.x + max_thruster_force_vector.x
-		elseif(max_thruster_force_vector.y>0) then
+		end
+
+		if(max_thruster_force_vector.y>0) then
 			force_saturation_table.pos.y = force_saturation_table.pos.y + max_thruster_force_vector.y
-		elseif(max_thruster_force_vector.y<0) then
+		else
 			force_saturation_table.neg.y = force_saturation_table.neg.y + max_thruster_force_vector.y
-		elseif(max_thruster_force_vector.z>0) then
+		end
+
+		if(max_thruster_force_vector.z>0) then
 			force_saturation_table.pos.z = force_saturation_table.pos.z + max_thruster_force_vector.z
-		elseif(max_thruster_force_vector.z<0) then
+		else
 			force_saturation_table.neg.z = force_saturation_table.neg.z + max_thruster_force_vector.z
 		end
 
 		local max_thruster_torque_vector = new_min_r:cross(new_min_dir) * max_thruster_force
 		if(max_thruster_torque_vector.x>0) then
 			torque_saturation_table.pos.x = torque_saturation_table.pos.x + max_thruster_torque_vector.x
-		elseif(max_thruster_torque_vector.x<0) then
+		else
 			torque_saturation_table.neg.x = torque_saturation_table.neg.x + max_thruster_torque_vector.x
-		elseif(max_thruster_torque_vector.y>0) then
-			torque_saturation_table.pos.y = torque_saturation_table.pos.y + max_thruster_torque_vector.y
-		elseif(max_thruster_torque_vector.y<0) then
-			torque_saturation_table.neg.y = torque_saturation_table.neg.y + max_thruster_torque_vector.y
-		elseif(max_thruster_torque_vector.z>0) then
-			torque_saturation_table.pos.z = torque_saturation_table.pos.z + max_thruster_torque_vector.z
-		elseif(max_thruster_torque_vector.z<0) then
-			torque_saturation_table.neg.z = torque_saturation_table.neg.z + max_thruster_torque_vector.z
 		end
 
+		if(max_thruster_torque_vector.y>0) then
+			torque_saturation_table.pos.y = torque_saturation_table.pos.y + max_thruster_torque_vector.y
+		else
+			torque_saturation_table.neg.y = torque_saturation_table.neg.y + max_thruster_torque_vector.y
+		end
+
+		if(max_thruster_torque_vector.z>0) then
+			torque_saturation_table.pos.z = torque_saturation_table.pos.z + max_thruster_torque_vector.z
+		else
+			torque_saturation_table.neg.z = torque_saturation_table.neg.z + max_thruster_torque_vector.z
+		end
 	end
 
 	max_linear_acceleration.pos = force_saturation_table.pos/ship_mass
