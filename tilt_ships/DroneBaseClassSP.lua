@@ -169,39 +169,50 @@ function DroneBaseClassSP:buildJacobianTranspose(thruster_table)
 		local new_dir = inverse_new_default_ship_orientation:rotateVector3(dir)
 		local new_r = inverse_new_default_ship_orientation:rotateVector3(r)
 		local force = new_dir*base_thrust
-		local torque = utilities.round_vector3(new_r:cross(force))
+		local torque = new_r:cross(force)
 		jacobian_transpose[i] = {
-			max(0,force.x==0 and 0 or force.x), --positive
-			abs(min(0,force.x==0 and 0 or force.x)),--negative
-			max(0,force.y==0 and 0 or force.y),
-			abs(min(0,force.y==0 and 0 or force.y)),
-			max(0,force.z==0 and 0 or force.z),
-			abs(min(0,force.z==0 and 0 or force.z)),
+			max(0,force.x), --positive
+			abs(min(0,force.x)),--negative
+			max(0,force.y),
+			abs(min(0,force.y)),
+			max(0,force.z),
+			abs(min(0,force.z)),
 		
-			max(0,torque.x==0 and 0 or torque.x),
-			abs(min(0,torque.x==0 and 0 or torque.x)),
-			max(0,torque.y==0 and 0 or torque.y),
-			abs(min(0,torque.y==0 and 0 or torque.y)),
-			max(0,torque.z==0 and 0 or torque.z),
-			abs(min(0,torque.z==0 and 0 or torque.z)),
+			max(0,torque.x),
+			abs(min(0,torque.x)),
+			max(0,torque.y),
+			abs(min(0,torque.y)),
+			max(0,torque.z),
+			abs(min(0,torque.z)),
 		}
 	end
+
+	-- local h = fs.open("./input_thruster_table/base.json","w")
+	-- h.writeLine(JSON:encode_pretty(jacobian_transpose))
+	-- h.flush()
+	-- h.close()
 
 	local total = {0,0,0,0,0,0,0,0,0,0,0,0}
 
 	for i,v in ipairs(jacobian_transpose) do
 		for ii,vv in ipairs(v) do
-			if(jacobian_transpose[i][ii]~=0)then
-				total[ii] = total[ii]+(jacobian_transpose[i][ii])
-			end
+			total[ii] = total[ii]+(jacobian_transpose[i][ii])
 		end
 	end
+
+	-- local h = fs.open("./input_thruster_table/total.json","w")
+	-- h.writeLine(JSON:encode_pretty(total))
+	-- h.flush()
+	-- h.close()
+
 	--the total force/torque is distributed depending on each thruster's contribution by percentage
 	for i,v in ipairs(jacobian_transpose) do
 		for ii,vv in ipairs(v) do
-			if(jacobian_transpose[i][ii]~=0) then 
-				local thruster_contribution_percentage = (jacobian_transpose[i][ii])/total[ii]
-				jacobian_transpose[i][ii] = thruster_contribution_percentage/jacobian_transpose[i][ii]
+			local base_force_or_torque = jacobian_transpose[i][ii]
+			if(jacobian_transpose[i][ii]~=0) then
+				local thruster_contribution_percentage = (base_force_or_torque)/total[ii]
+				local redstone_conversion_coefficient = thruster_contribution_percentage/base_force_or_torque
+				jacobian_transpose[i][ii] = redstone_conversion_coefficient
 			end
 		end
 	end
@@ -289,9 +300,14 @@ function DroneBaseClassSP:initFlightConstants()
 	max_angular_acceleration.pos = matrix.mul(self.ship_constants.LOCAL_INV_INERTIA_TENSOR,torque_saturation_pos)
 	local torque_saturation_neg = matrix({{torque_saturation_table.neg.x},{torque_saturation_table.neg.y},{torque_saturation_table.neg.z}})
 	max_angular_acceleration.neg = matrix.mul(self.ship_constants.LOCAL_INV_INERTIA_TENSOR,torque_saturation_neg)
-	
+
 	self.max_linear_acceleration = max_linear_acceleration 		--{pos={x,y,z},neg={x,y,z}}
 	self.max_angular_acceleration = max_angular_acceleration	--{pos={x,y,z},neg={x,y,z}}
+	
+	-- local h = fs.open("./tables/max_acceleration.json","w")
+	-- h.writeLine(JSON:encode_pretty({max_linear_acceleration=max_linear_acceleration,max_angular_acceleration=max_angular_acceleration}))
+	-- h.flush()
+	-- h.close()
 
 	self.min_time_step = min_time_step
 	self.ship_mass = ship_mass
@@ -362,12 +378,6 @@ function DroneBaseClassSP:calculateMovement()
 
 		local thruster_redstone_power = matrix.mul(self.JACOBIAN_TRANSPOSE,net)
 
-		self:debugProbe({
-		net_z_pos=net[11],
-		net_z_neg=net[12],
-		r_x_pos_thrust=thruster_redstone_power[7],
-		r_x_neg_thrust=thruster_redstone_power[8]})
-		
 		self:applyRedStonePower(thruster_redstone_power)
 		sleep(self.min_time_step)
 	end
