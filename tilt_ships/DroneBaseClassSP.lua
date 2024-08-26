@@ -323,7 +323,7 @@ function DroneBaseClassSP:calculateMovement()
 
 	self:initFeedbackControllers()
 	
-	self.pwmMatrixList = utilities.PwmMatrixList(10)
+	self.pwmMatrixList = utilities.PwmMatrixList(#self.JACOBIAN_TRANSPOSE)
 	
 	self:customPreFlightLoopBehavior()
 	
