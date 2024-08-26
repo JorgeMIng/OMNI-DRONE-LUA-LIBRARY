@@ -39,7 +39,7 @@ function DroneBaseClassSP:powerThrusters(redstone_power)
 end
 
 function DroneBaseClassSP:getOffsetDefaultShipOrientation(default_ship_orientation)	--based on dynamic ship orientation (rotated from how it is oriented right now)
-	return DroneBaseClass:getOffsetDefaultShipOrientation(default_ship_orientation)
+	return default_ship_orientation
 end
 
 function DroneBaseClassSP:initFeedbackControllers()
@@ -322,7 +322,7 @@ function DroneBaseClassSP:calculateMovement()
 	self:initFlightConstants()
 
 	self:initFeedbackControllers()
-	
+
 	self.pwmMatrixList = utilities.PwmMatrixList(#self.JACOBIAN_TRANSPOSE)
 	
 	self:customPreFlightLoopBehavior()
@@ -346,7 +346,7 @@ function DroneBaseClassSP:calculateMovement()
 		self.ship_global_velocity = vector.new(self.ship_global_velocity.x,self.ship_global_velocity.y,self.ship_global_velocity.z)
 
 		local error = self:calculateFeedbackControlValueError()
-
+		--self:debugProbe({error=error})
 		local pid_output_angular_acceleration,pid_output_linear_acceleration = self:calculateFeedbackControlValues(error)
 		local net_torque = matrix.mul(self.ship_constants.LOCAL_INERTIA_TENSOR,pid_output_angular_acceleration)
 		
