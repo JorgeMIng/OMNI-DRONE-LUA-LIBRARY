@@ -64,12 +64,9 @@ function DroneBaseClassKontraption:initFlightConstants()
 	local ship_mass = self.sensors.shipReader:getMass()
 
     --CONFIGURABLES--
-    
-    --local target_aim = vector.new(0,-0.707,-0.707)--point local Z axis
-    --local target_global_pos = vector.new(14,10,14) -- fly to world coordinates
+    local gravity_acceleration_vector = vector.new(0,-9.8,0)
 
     local ion_thruster_base_force = self.ship_constants.IONTHRUST_CONFIG*100000
-    local gravity_acceleration_vector = vector.new(0,-9.8,0)
     --CONFIGURABLES--
 
     local net_base_thrust = {
@@ -78,6 +75,11 @@ function DroneBaseClassKontraption:initFlightConstants()
     }
     net_base_thrust.pos = self.ship_constants.ION_THRUSTERS_COUNT.pos*ion_thruster_base_force
     net_base_thrust.neg = self.ship_constants.ION_THRUSTERS_COUNT.neg*ion_thruster_base_force
+
+    --[[ --WIP, waiting for kontraption update
+    net_base_thrust.pos = net_base_thrust.pos + self.ship_constants.LIQUID_FUEL_THRUSTER_FORCE.pos
+    net_base_thrust.neg = net_base_thrust.neg + self.ship_constants.LIQUID_FUEL_THRUSTER_FORCE.pos
+    ]]--
 
     self.min_time_step = min_time_step
 	self.ship_mass = ship_mass
