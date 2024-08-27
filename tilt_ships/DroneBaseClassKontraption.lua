@@ -6,7 +6,8 @@ local quaternion = require "lib.quaternions"
 local getLocalPositionError = flight_utilities.getLocalPositionError
 local clamp_vector3 = utilities.clamp_vector3
 
-shipControl=peripheral.find("ShipControlInterface")
+shipControl=peripheral.find("shipControlInterface") --for 1.18.2
+--shipControl=peripheral.find("ShipControlInterface")--Use this instead if you're playing in 1.20.1
 
 
 local DroneBaseClassKontraption = DroneBaseClassSP:subclass()
@@ -42,7 +43,7 @@ function DroneBaseClassKontraption:init(instance_configs)
 end
 
 function DroneBaseClassKontraption:initFeedbackControllers()
-    self.pos_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.POS.P,
+    self.lateral_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.POS.P,
                                                         self.ship_constants.PID_SETTINGS.POS.I,
                                                         self.ship_constants.PID_SETTINGS.POS.D,
                                                         -1,1)
@@ -53,7 +54,7 @@ function DroneBaseClassKontraption:calculateFeedbackControlValueError()
 end
 
 function DroneBaseClassKontraption:calculateFeedbackControlValues(error)
-	return 	self.pos_PID:run(error.pos)
+	return 	self.lateral_PID:run(error.pos)
 end
 
 
@@ -106,8 +107,9 @@ function DroneBaseClassKontraption:calculateMovement()
         self:customFlightLoopBehavior(customFlightVariables)
         self.ship_rotation = self.sensors.shipReader:getRotation(true)
 		self.ship_rotation = quaternion.new(self.ship_rotation.w,self.ship_rotation.x,self.ship_rotation.y,self.ship_rotation.z)
-
-        local new_rot = self.target_rotation
+        self.ship_rotation = self:getOffsetDefaultShipOrientation(self.ship_rotation)
+  
+        local new_rot = self.target_rotation*self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0)):inv()
         shipControl.setRotation(new_rot[2],new_rot[3],new_rot[4],new_rot[1])
 		
         self.ship_global_position = self.sensors.shipReader:getWorldspacePosition()
