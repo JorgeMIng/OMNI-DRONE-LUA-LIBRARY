@@ -113,9 +113,9 @@ Panabas.remote_move_angular = vector.new(0,0,0)
 Panabas.axe_mode = true
 Panabas.blade_mode = false
 Panabas.defensePose = false
-function Panabas:overrideInitDynamicControllers()
+function Panabas:overrideInitFeedbackControllers()
 	local panabas = self
-	function self.ShipFrame:initDynamicControllers()
+	function self.ShipFrame:initFeedbackControllers()
 		if(panabas.blade_mode) then
 			self.lateral_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.POS.P,
 																	self.ship_constants.PID_SETTINGS.POS.I,
@@ -131,9 +131,9 @@ function Panabas:overrideInitDynamicControllers()
 	end
 end
 
-function Panabas:overrideCalculateDynamicControlValueError()
+function Panabas:overrideCalculateFeedbackControlValueError()
 	local panabas = self
-	function self.ShipFrame:calculateDynamicControlValueError()
+	function self.ShipFrame:calculateFeedbackControlValueError()
 		local target_value = self.target_global_velocity
 		local measured_value = self.ship_global_velocity
 		if(panabas.blade_mode) then
@@ -144,9 +144,9 @@ function Panabas:overrideCalculateDynamicControlValueError()
 	end
 end
 
-function Panabas:overrideCalculateDynamicControlValues()
+function Panabas:overrideCalculateFeedbackControlValues()
 	local panabas = self
-	function self.ShipFrame:calculateDynamicControlValues(error)
+	function self.ShipFrame:calculateFeedbackControlValues(error)
 		return 	self.lateral_PID:run(error)
 	end
 end
@@ -249,9 +249,9 @@ end
 function Panabas:init(instance_configs)
 	self:initializeShipFrameClass(instance_configs)
 
-	self:overrideInitDynamicControllers()
-	self:overrideCalculateDynamicControlValueError()
-	self:overrideCalculateDynamicControlValues()
+	self:overrideInitFeedbackControllers()
+	self:overrideCalculateFeedbackControlValueError()
+	self:overrideCalculateFeedbackControlValues()
 
 	self:overrideShipFrameCustomProtocols()
 	self:overrideShipFrameGetCustomSettings()
