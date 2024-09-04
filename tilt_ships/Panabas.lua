@@ -82,16 +82,13 @@ function Panabas:overrideShipFrameCustomProtocols()
 		{
 			["blade_mode"]= function (args)
 				panabas.blade_mode = not panabas.blade_mode
-				self:initDynamicControllers()
+				self:initFeedbackControllers()
 			end,
 			["axe_mode"]= function (args)
 				panabas.axe_mode = not panabas.axe_mode
 			end,
 			["move"]= function (arg)
-				print("linear moving",textutils.serialise(arg.linear))
 				panabas.remote_move_linear = vector.new(arg.linear.x,arg.linear.y,arg.linear.z)
-
-				print("angular moving",textutils.serialise(arg.angular))
 				local angle = vector.new(arg.angular.x,arg.angular.y,arg.angular.z)
 				panabas.remote_move_angular = angle
 			end,
