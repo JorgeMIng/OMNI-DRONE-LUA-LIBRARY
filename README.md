@@ -10,4 +10,4 @@ The `DroneBaseClassKontraption` class was updated to work for VS+Kontraption MC 
 
 If you are trying to use the class in 1.18.2, please edit `lib>tilt_ship>DroneBaseClassKontraption.lua` and rename the peripheral with a lowercase "s" instead... or you know, you could wait for me to just add a new class specific for 1.18.2 in the next update...
 
-Also... I haven't updated the class to work with luquid multiblock thrusters yet. I'll update the class... Soon :)
+Also... I haven't updated the class to work with liquid multiblock thrusters yet. I'll update the class... Soon :)
