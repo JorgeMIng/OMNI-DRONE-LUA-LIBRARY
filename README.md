@@ -13,3 +13,8 @@ If you are trying to use the class in 1.20.1, please edit `lib>tilt_ship>DroneBa
 
 
 Also... I haven't updated the class to work with liquid fuel multiblock thrusters yet. I'll update the class... Soon :)
+
+Changelog Sep 10, 2024:
++ added `DroneBaseClassKontraption1201` to use on MC 1.20.1. That way, you don't have to edit the `DroneBaseClassKontraption` class manually anymore.
++ added `DroneBaseClassCommandComputer` for CC:CommandComputer driven ships with CC:VS installed
++ added `DroneBaseClassHexxySkies` for HexxySkies+HexTweaks driven ships
