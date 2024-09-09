@@ -6,13 +6,20 @@ local quaternion = require "lib.quaternions"
 local getLocalPositionError = flight_utilities.getLocalPositionError
 local clamp_vector3 = utilities.clamp_vector3
 
-shipControl=peripheral.find("shipControlInterface") --for 1.18.2
---shipControl=peripheral.find("ShipControlInterface")--Use this instead if you're playing in 1.20.1
+
 
 
 local DroneBaseClassKontraption = DroneBaseClassSP:subclass()
 
+function DroneBaseClassKontraption:initShipTerminal()
+    print("ssSS")
+    self.shipControl=peripheral.find("shipControlInterface") --for 1.18.2
+end
+
 function DroneBaseClassKontraption:init(instance_configs)
+
+    self:initShipTerminal()
+
 	local configs = instance_configs
 
 	configs.ship_constants_config = configs.ship_constants_config or {}
@@ -89,9 +96,9 @@ end
 
 function DroneBaseClassKontraption:powerThrusters(power)
     if(type(power) == "number")then
-		shipControl.setMovement(power,power,power)
+		self.shipControl.setMovement(power,power,power)
 	else
-		shipControl.setMovement(power.x,power.y,power.z)
+		self.shipControl.setMovement(power.x,power.y,power.z)
 	end
 end
 
@@ -112,7 +119,7 @@ function DroneBaseClassKontraption:calculateMovement()
         self.ship_rotation = self:getOffsetDefaultShipOrientation(self.ship_rotation)
   
         local new_rot = self.target_rotation*self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0)):inv()
-        shipControl.setRotation(new_rot[2],new_rot[3],new_rot[4],new_rot[1])
+        self.shipControl.setRotation(new_rot[2],new_rot[3],new_rot[4],new_rot[1])
 		
         self.ship_global_position = self.sensors.shipReader:getWorldspacePosition()
 		self.ship_global_position = vector.new(self.ship_global_position.x,self.ship_global_position.y,self.ship_global_position.z)
