@@ -194,4 +194,36 @@ function utilities.NonBlockingCooldownTimer(cooldown)
 	}
 end
 
+function utilities.ArrayExtract(t, fnKeep)
+    local j, n = 1, #t;
+    local new_t={}
+    for i=1,n do
+        if (fnKeep(t, i, j)) then
+            table.insert(new_t,t[i])
+        end
+    end
+    return new_t;
+end
+
+--https://stackoverflow.com/questions/12394841/safely-remove-items-from-an-array-table-while-iterating
+--by Mitch McMabers
+function utilities.ArrayRemove(t, fnKeep)
+    local j, n = 1, #t;
+
+    for i=1,n do
+        if (fnKeep(t, i, j)) then
+            -- Move i's kept value to j's position, if it's not already there.
+            if (i ~= j) then
+                t[j] = t[i];
+                t[i] = nil;
+            end
+            j = j + 1; -- Increment position of where we'll place the next kept value.
+        else
+            t[i] = nil;
+        end
+    end
+
+    return t;
+end
+
 return utilities
