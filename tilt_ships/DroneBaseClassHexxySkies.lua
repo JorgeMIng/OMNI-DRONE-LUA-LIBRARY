@@ -3,12 +3,14 @@ local DroneBaseClassSP = require "lib.tilt_ships.DroneBaseClassSP"
 local flight_utilities = require "lib.flight_utilities"
 local pidcontrollers = require "lib.pidcontrollers"
 local quaternion = require "lib.quaternions"
+local HexPatterns = require "lib.hexTweaks.HexPatterns"
 
 local getQuaternionRotationError = flight_utilities.getQuaternionRotationError
-local getLocalPositionError = flight_utilities.getLocalPositionError
-local clamp_vector3 = utilities.clamp_vector3
 
 local wand = peripheral.find("wand")
+
+local IOTAS = HexPatterns.IOTAS
+local Hex = HexPatterns(wand)
 
 local DroneBaseClassHexxySkies = DroneBaseClassSP:subclass()
 
@@ -78,158 +80,6 @@ function DroneBaseClassHexxySkies:initFlightConstants()
 	self.gravity_acceleration_vector = gravity_acceleration_vector*2 --idk why gravity is doubled when using hex forces
 end
 
-local IOTAS = {
-    chat={
-            startDir = "NORTH_EAST",
-            angles = "de",
-    },
-    eraseTopOfStack={
-        startDir = "SOUTH_EAST",
-        angles = "a",
-    },
-    pushNextPatternToStack={
-        startDir = "WEST",
-        angles = "qqqaw",
-    },
-    getEntityLookVector={--Alidade's Purification (entity → vector)
-            startDir = "EAST",
-            angles = "wa",
-    },
-
-    duplicateTopStack={--Gemini Decomposition (any → any, any)
-            startDir = "EAST",
-            angles = "aadaa",
-    },
-
-    getEntityPosition={--Compass' Purification (entity → vector)
-            startDir = "NORTH_EAST",
-            angles = "aa",
-    },
-
-    getEntitiesInZone={
-            animals={--Zone Dstl.: Animal (vector, number → list)
-                        startDir = "SOUTH_EAST",
-                        angles = "qqqqqwdeddwa",
-                    },
-            non_player={--Zone Dstl.: Non-Player (vector, number → list)
-                        startDir = "NORTH_EAST",
-                        angles = "eeeeewaqaawe",
-                    },
-            non_living={
-                startDir = "NORTH_EAST",
-                angles = "eeeeewaqaawd",
-              },
-            non_item={
-                startDir = "NORTH_EAST",
-                angles = "eeeeewaqaaww",
-              }
-    },
-    multiply={--Multiplicative Dstl. (num/vec, num/vec → num/vec)
-            startDir = "SOUTH_EAST",
-            angles = "waqaw",
-    },
-    divide={
-        startDir = "NORTH_EAST",
-        angles = "wdedw",
-    },
-    add={
-        startDir = "NORTH_EAST",
-        angles = "waaw",
-    },
-    subtract={
-            startDir = "NORTH_WEST",
-            angles = "wddw",
-    },
-    getLength={
-        startDir = "NORTH_EAST",
-        angles = "wqaqw",
-    },
-    getAbsValue={
-        startDir = "NORTH_EAST",
-        angles = "wqaqw",
-    },
-    impulse={--Impulse (entity, vector →)
-        startDir = "SOUTH_WEST",
-        angles = "awqqqwaqw",
-    },
-    
-    thothsGambit={--Thoth's Gambit (list of patterns, list → list)
-            startDir = "NORTH_EAST",
-            angles = "dadad",
-        },
-    
-    hermesGambit={--Hermes' Gambit ([pattern] | pattern → many)
-            startDir = "SOUTH_EAST",
-            angles = "deaqq",
-        },
-    pushListContentToStack={
-            startDir = "NORTH_WEST",
-            angles = "qwaeawq",
-        },
-    FIVE={
-            startDir = "SOUTH_EAST",
-            angles = "aqaaq",
-        },
-    TEN={
-            startDir = "SOUTH_EAST",
-            angles = "aqaae",
-        },
-    summonWisp={
-            startDir = "NORTH_WEST",
-            angles = "aqaweewaqawee",
-    },
-    --Ignite Block (vector →)
-    igniteBlock={
-        startDir = "SOUTH_EAST",
-        angles = "aaqawawa",
-    },
-    fireBall={
-        startDir = "EAST",
-        angles = "ddwddwdd",
-    },
-
-    scan_ships={
-        startDir = "EAST",
-        angles = "wawwwaqaweeee",
-    },
-    ship_apply_force={
-        startDir = "EAST",
-        angles = "wawwwawawwqqqwwaq",
-    },
-    ship_apply_force_invariant={
-        startDir = "EAST",
-        angles = "wawwwawawwqqqwwaqw",
-    },
-    ship_apply_torque={
-        startDir = "EAST",
-        angles = "wawwwawawwqqqwwawa",
-    },
-    ship_apply_torque_invariant={
-        startDir = "EAST",
-        angles = "wawwwawawwqqqwwaqqd",
-    },
-    ship_get_name={
-        startDir = "EAST",
-        angles = "wawwwaqwa",
-    },
-    getTableLength={
-        startDir = "NORTH_EAST",
-        angles = "wqaqw",
-    },
-    getStackSize={
-        startDir = "NORTH_WEST",
-        angles = "qwaeawqaeaqa",
-    }
-}
-
-function DroneBaseClassHexxySkies:executePatternOnTable()
-    wand.runPattern(IOTAS.thothsGambit)
-end
-
-function DroneBaseClassHexxySkies:executePattern()
-    wand.runPattern(IOTAS.hermesGambit)
-end
-
 function DroneBaseClassHexxySkies:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
     local mass_vector = net_linear_acceleration_invariant:normalize()*self.ship_mass
     
@@ -273,7 +123,7 @@ function DroneBaseClassHexxySkies:castHex(net_angular_acceleration,net_linear_ac
     iotaPattern=self:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
     iotaPattern=self:applyTorqueIotaPattern(iotaPattern,net_angular_acceleration)
     wand.pushStack(iotaPattern)
-    self:executePattern()
+    Hex:executePattern()
 end
 
 function DroneBaseClassHexxySkies:calculateMovement()
