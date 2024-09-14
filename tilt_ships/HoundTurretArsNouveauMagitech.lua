@@ -2,7 +2,7 @@ local HoundTurretBase = require "lib.tilt_ships.HoundTurretBase"
 
 local HoundTurretArsNouveauMagitech = HoundTurretBase:subclass()
 
-function HoundTurretArsNouveauMagitech:initOpenCURepulsorBlock()
+function HoundTurretArsNouveauMagitech:initRepulsorPeripheral()
 	self.repulsor = peripheral.find("opencu:repulsor")
 
 	self.repulsor.recalibrateByIdx(1)
@@ -14,7 +14,7 @@ end
 
 
 HoundTurretArsNouveauMagitech.laserOn = false
-function HoundTurretArsNouveauMagitech:activateLaser()
+function HoundTurretArsNouveauMagitech:activateLaserAnimation()
 	if(not laserOn) then
 		redstone.setOutput("right",false)
 		redstone.setOutput("left",true)
@@ -24,7 +24,7 @@ function HoundTurretArsNouveauMagitech:activateLaser()
 	end
 end
 
-function HoundTurretArsNouveauMagitech:deactivateLaser()
+function HoundTurretArsNouveauMagitech:deactivateLaserAnimation()
 	if(laserOn) then
 		redstone.setOutput("left",false)
 		redstone.setOutput("right",true)
@@ -37,11 +37,11 @@ end
 --overridden functions--
 function HoundTurretArsNouveauMagitech:onGunsActivation()
 	self.repulsor.pulse(0,0,0)
-	self:activateLaser()
+	self:activateLaserAnimation()
 end
 
 function HoundTurretArsNouveauMagitech:onGunsDeactivation()
-	self:deactivateLaser()
+	self:deactivateLaserAnimation()
 end
 
 function HoundTurretArsNouveauMagitech:alternateFire(step)
@@ -66,7 +66,7 @@ function HoundTurretArsNouveauMagitech:getProjectileSpeed()
 end
 
 function HoundTurretArsNouveauMagitech:init(instance_configs)
-	self:initOpenCURepulsorBlock()
+	self:initRepulsorPeripheral()
 	HoundTurretArsNouveauMagitech.superClass.init(self,instance_configs)
 end
 --overridden functions--
