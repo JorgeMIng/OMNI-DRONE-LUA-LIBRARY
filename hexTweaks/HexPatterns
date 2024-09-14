@@ -1,0 +1,263 @@
+local Object = require "lib.object.Object"
+
+local HexPatterns = Object:subclass()
+
+HexPatterns.IOTAS = {
+    chat={
+            startDir = "NORTH_EAST",
+            angles = "de",
+    },
+    eraseTopOfStack={
+        startDir = "SOUTH_EAST",
+        angles = "a",
+    },
+    pushNextPatternToStack={--Consider
+        startDir = "WEST",
+        angles = "qqqaw",
+    },
+    getEntityLookVector={--Alidade's Purification (entity → vector)
+            startDir = "EAST",
+            angles = "wa",
+    },
+
+    duplicateTopStack={--Gemini Decomposition (any → any, any)
+            startDir = "EAST",
+            angles = "aadaa",
+    },
+
+    getEntityPosition={--Compass' Purification (entity → vector)
+            startDir = "NORTH_EAST",
+            angles = "aa",
+    },
+
+    getEntitiesInZone={
+            animals={--Zone Dstl.: Animal (vector, number → list)
+                        startDir = "SOUTH_EAST",
+                        angles = "qqqqqwdeddwa",
+                    },
+            non_player={--Zone Dstl.: Non-Player (vector, number → list)
+                        startDir = "NORTH_EAST",
+                        angles = "eeeeewaqaawe",
+                    },
+            non_living={
+                startDir = "NORTH_EAST",
+                angles = "eeeeewaqaawd",
+              },
+            non_item={
+                startDir = "NORTH_EAST",
+                angles = "eeeeewaqaaww",
+              }
+    },
+    multiply={--Multiplicative Dstl. (num/vec, num/vec → num/vec)
+            startDir = "SOUTH_EAST",
+            angles = "waqaw",
+    },
+    divide={
+        startDir = "NORTH_EAST",
+        angles = "wdedw",
+    },
+    add={
+        startDir = "NORTH_EAST",
+        angles = "waaw",
+    },
+    subtract={
+            startDir = "NORTH_WEST",
+            angles = "wddw",
+    },
+    getLength={
+        startDir = "NORTH_EAST",
+        angles = "wqaqw",
+    },
+    getAbsValue={
+        startDir = "NORTH_EAST",
+        angles = "wqaqw",
+    },
+    impulse={--Impulse (entity, vector →)
+        startDir = "SOUTH_WEST",
+        angles = "awqqqwaqw",
+    },
+    
+    thothsGambit={--Thoth's Gambit (list of patterns, list → list)
+            startDir = "NORTH_EAST",
+            angles = "dadad",
+        },
+    
+    hermesGambit={--Hermes' Gambit ([pattern] | pattern → many)
+            startDir = "SOUTH_EAST",
+            angles = "deaqq",
+        },
+    pushListContentToStack={
+            startDir = "NORTH_WEST",
+            angles = "qwaeawq",
+        },
+    FIVE={
+            startDir = "SOUTH_EAST",
+            angles = "aqaaq",
+        },
+    TEN={
+            startDir = "SOUTH_EAST",
+            angles = "aqaae",
+        },
+    summonWisp={
+            startDir = "NORTH_WEST",
+            angles = "aqaweewaqawee",
+    },
+    --Ignite Block (vector →)
+    igniteBlock={
+        startDir = "SOUTH_EAST",
+        angles = "aaqawawa",
+    },
+    fireBall={
+        startDir = "EAST",
+        angles = "ddwddwdd",
+    },
+
+    scan_ships={
+        startDir = "EAST",
+        angles = "wawwwaqaweeee",
+    },
+    ship_apply_force={
+        startDir = "EAST",
+        angles = "wawwwawawwqqqwwaq",
+    },
+    ship_apply_force_invariant={
+        startDir = "EAST",
+        angles = "wawwwawawwqqqwwaqw",
+    },
+    ship_apply_torque={
+        startDir = "EAST",
+        angles = "wawwwawawwqqqwwawa",
+    },
+    ship_apply_torque_invariant={
+        startDir = "EAST",
+        angles = "wawwwawawwqqqwwaqqd",
+    },
+    ship_get_name={
+        startDir = "EAST",
+        angles = "wawwwaqwa",
+    },
+    getTableLength={
+        startDir = "NORTH_EAST",
+        angles = "wqaqw",
+    },
+    getStackSize={
+        startDir = "NORTH_WEST",
+        angles = "qwaeawqaeaqa",
+    }
+}
+
+function HexPatterns:executePatternOnTable()
+    self.wand.runPattern(self.IOTAS.thothsGambit)
+end
+
+function HexPatterns:executePattern()
+    self.wand.runPattern(self.IOTAS.hermesGambit)
+end
+
+function HexPatterns:scanEntitiesInZone(pos,radius,zonePattern)
+    self.wand.pushStack({
+        x= pos.x,
+        y= pos.y,
+        z= pos.z
+    })
+    self.wand.pushStack(
+        radius
+    )
+    self.wand.runPattern(zonePattern)
+end
+
+function HexPatterns:pulseEntityIota(pulse_direction,pulse_magnitude)
+    local pulse_vector = pulse_direction*pulse_magnitude
+    return
+    {
+        self.IOTAS.pushNextPatternToStack,
+        pulse_vector,
+        self.IOTAS.impulse
+    }
+end
+
+function HexPatterns:pulseEntityDistributedIota(pulse_direction,pulse_magnitude)
+    local pulse_vector = pulse_direction*pulse_magnitude
+    local iotaPattern = {}
+    for i=0,pulse_magnitude do
+        table.insert(iotaPattern,self.IOTAS.duplicateTopStack)
+        table.insert(iotaPattern,self.IOTAS.pushNextPatternToStack)
+        table.insert(iotaPattern,pulse_direction)
+        table.insert(iotaPattern,self.IOTAS.impulse)
+    end
+    return iotaPattern
+end
+
+function HexPatterns:repelEntityLookIota(pulse_magnitude)
+    return{
+        self.IOTAS.duplicateTopStack,
+        self.IOTAS.getEntityLookVector,
+        self.IOTAS.pushNextPatternToStack,
+        pulse_magnitude,
+        self.IOTAS.multiply,
+        self.IOTAS.impulse
+    }
+end
+
+function HexPatterns:repelEntityIota(pulse_origin,pulse_magnitude)
+
+    return
+    {
+        self.IOTAS.duplicateTopStack,
+        self.IOTAS.getEntityPosition,
+        self.IOTAS.pushNextPatternToStack,
+        pulse_origin,
+        self.IOTAS.subtract,
+        self.IOTAS.duplicateTopStack,
+        self.IOTAS.getLength,
+        self.IOTAS.divide,
+        self.IOTAS.pushNextPatternToStack,
+        pulse_magnitude,
+        self.IOTAS.multiply,
+        self.IOTAS.impulse
+    }
+end
+
+function HexPatterns:fireballEntityIota(fireball_strength)
+
+    return
+    {
+        self.IOTAS.getEntityPosition,
+        self.IOTAS.pushNextPatternToStack,
+        vector.new(0,-1,0),
+        self.IOTAS.add,
+        self.IOTAS.pushNextPatternToStack,
+        fireball_strength,
+        self.IOTAS.fireBall,
+    }
+end
+
+function HexPatterns:repelandFireballEntityIota(pulse_origin,pulse_magnitude,fireball_strength)
+
+    return
+    {
+        self.IOTAS.duplicateTopStack,
+        self.IOTAS.duplicateTopStack,
+        self.IOTAS.getEntityPosition,
+        self.IOTAS.pushNextPatternToStack,
+        pulse_origin,
+        self.IOTAS.subtract,
+        self.IOTAS.duplicateTopStack,
+        self.IOTAS.getLength,
+        self.IOTAS.divide,
+        self.IOTAS.pushNextPatternToStack,
+        pulse_magnitude,
+        self.IOTAS.multiply,
+        self.IOTAS.impulse,
+
+        unpack(fireballEntityIota(fireball_strength))
+        
+    }
+end
+
+function HexPatterns:init(wand)
+    self.wand = wand
+    HexPatterns.superClass.init(self)
+end
+
+return HexPatterns
