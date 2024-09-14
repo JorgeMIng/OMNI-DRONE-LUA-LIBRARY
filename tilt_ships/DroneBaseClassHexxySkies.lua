@@ -232,10 +232,14 @@ end
 
 function DroneBaseClassHexxySkies:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
     local mass_vector = net_linear_acceleration_invariant:normalize()*self.ship_mass
-    for i=0,net_linear_acceleration_invariant:length() do
+    
+    local distribution = net_linear_acceleration_invariant:length()*2
+    local distributed_force = mass_vector*0.5
+
+    for i=0, distribution do
         table.insert(iotaPattern,IOTAS.duplicateTopStack)
         table.insert(iotaPattern,IOTAS.pushNextPatternToStack)
-        table.insert(iotaPattern,mass_vector)
+        table.insert(iotaPattern,distributed_force)
         table.insert(iotaPattern,IOTAS.ship_apply_force_invariant)
     end
     return iotaPattern
