@@ -97,12 +97,16 @@ end
 
 function DroneBaseClassHexxySkies:applyTorqueIotaPattern(iotaPattern,net_angular_acceleration)
     local normalized_ang_acc = net_angular_acceleration:normalize()
+    
+    local distribution = net_angular_acceleration:length()*2
     local distributed_torque = matrix.mul(self.ship_constants.LOCAL_INERTIA_TENSOR,matrix({
                                             normalized_ang_acc.x,
                                             normalized_ang_acc.y,
                                             normalized_ang_acc.z}))
     distributed_torque = vector.new(distributed_torque[1][1],distributed_torque[2][1],distributed_torque[3][1])
-    for i=0,net_angular_acceleration:length() do
+    distributed_torque = distributed_torque*0.5
+
+    for i=0,distribution do
         table.insert(iotaPattern,IOTAS.duplicateTopStack)
         table.insert(iotaPattern,IOTAS.pushNextPatternToStack)
         table.insert(iotaPattern,distributed_torque)
