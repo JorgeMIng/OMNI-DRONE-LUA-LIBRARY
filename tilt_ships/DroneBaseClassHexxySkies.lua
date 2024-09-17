@@ -83,8 +83,8 @@ end
 function DroneBaseClassHexxySkies:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
     local mass_vector = net_linear_acceleration_invariant:normalize()*self.ship_mass
     
-    local distribution = net_linear_acceleration_invariant:length()*2
-    local distributed_force = mass_vector*0.5
+    local distribution = net_linear_acceleration_invariant:length()*4
+    local distributed_force = mass_vector*0.25
 
     for i=0, distribution do
         table.insert(iotaPattern,IOTAS.duplicateTopStack)
@@ -98,13 +98,13 @@ end
 function DroneBaseClassHexxySkies:applyTorqueIotaPattern(iotaPattern,net_angular_acceleration)
     local normalized_ang_acc = net_angular_acceleration:normalize()
     
-    local distribution = net_angular_acceleration:length()*2
+    local distribution = net_angular_acceleration:length()*4
     local distributed_torque = matrix.mul(self.ship_constants.LOCAL_INERTIA_TENSOR,matrix({
                                             normalized_ang_acc.x,
                                             normalized_ang_acc.y,
                                             normalized_ang_acc.z}))
     distributed_torque = vector.new(distributed_torque[1][1],distributed_torque[2][1],distributed_torque[3][1])
-    distributed_torque = distributed_torque*0.5
+    distributed_torque = distributed_torque*0.25
 
     for i=0,distribution do
         table.insert(iotaPattern,IOTAS.duplicateTopStack)
@@ -116,6 +116,7 @@ function DroneBaseClassHexxySkies:applyTorqueIotaPattern(iotaPattern,net_angular
 end
 
 function DroneBaseClassHexxySkies:castHex(net_angular_acceleration,net_linear_acceleration_invariant)
+    wand.clearStack()
     local position = ship.getWorldspacePosition()
     local iotaPattern = {
         IOTAS.pushNextPatternToStack,
@@ -135,7 +136,7 @@ function DroneBaseClassHexxySkies:calculateMovement()
     self:initFeedbackControllers()
     self:customPreFlightLoopBehavior()
     local customFlightVariables = self:customPreFlightLoopVariables()
-
+    
     while self.run_firmware do
         if(self.ship_mass ~= self.sensors.shipReader:getMass()) then
 			self:initFlightConstants()
