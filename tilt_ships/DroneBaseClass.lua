@@ -216,6 +216,7 @@ function DroneBaseClass:initSensors(configs)
 end
 
 function DroneBaseClass:initPeripherals(configs)
+	configs = configs or {}
 	self:initSensors(configs)
 	self.modem = peripheral.find("modem", function(name, object) return object.isWireless() end)
 end
@@ -266,6 +267,7 @@ function DroneBaseClass:rotateInertiaTensors()
 end
 
 function DroneBaseClass:initConstants(ship_constants_config)
+	ship_constants_config = ship_constants_config or {}
 	local inertia_tensors = self:getInertiaTensors()
 
 	self.ship_constants = {
@@ -278,7 +280,7 @@ function DroneBaseClass:initConstants(ship_constants_config)
 		LOCAL_INERTIA_TENSOR = inertia_tensors[1],
 		LOCAL_INV_INERTIA_TENSOR = inertia_tensors[2],
 
-		DRONE_ID = 0,
+		DRONE_ID = self.MY_SHIP_ID,
 		DRONE_TYPE = "DEFAULT",
 		DEFAULT_NEW_LOCAL_SHIP_ORIENTATION = self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0)), --based on static ship world orientation (rotated from how it was built in the world grid)
 		
@@ -323,6 +325,7 @@ function DroneBaseClass:initConstants(ship_constants_config)
 end
 
 function DroneBaseClass:initModemChannels(channels_config)
+	channels_config = channels_config or {}
 	self.com_channels = {
 		DEBUG_TO_DRONE_CHANNEL = 0,
 		DRONE_TO_DEBUG_CHANNEL = 0,
@@ -335,6 +338,7 @@ function DroneBaseClass:initModemChannels(channels_config)
 		EXTERNAL_ORBIT_TARGETING_CHANNEL = 0,
 	}
 	local modem = self.modem
+	
 	for channel_name,new_channel in pairs(channels_config) do
 		self.com_channels[channel_name] = new_channel
 		modem.open(new_channel)

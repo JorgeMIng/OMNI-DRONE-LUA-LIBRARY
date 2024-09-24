@@ -111,7 +111,6 @@ function DroneBaseClassCommandComputer:calculateMovement()
 
         local net_torque = matrix.mul(self.ship_constants.LOCAL_INERTIA_TENSOR,pid_output_angular_acceleration)
         net_torque=vector.new(net_torque[1][1],net_torque[2][1],net_torque[3][1])
-        print(textutils.serialise(self.error))
 
 
         self:apply(net_torque,net_force_invariant)
