@@ -4,7 +4,7 @@ local flight_utilities = require "lib.flight_utilities"
 local pidcontrollers = require "lib.pidcontrollers"
 local quaternion = require "lib.quaternions"
 local HexPatterns = require "lib.hexTweaks.HexPatterns"
-
+local JSON = require "lib.JSON"
 local getQuaternionRotationError = flight_utilities.getQuaternionRotationError
 
 local wand = peripheral.find("wand")
@@ -83,9 +83,9 @@ end
 function DroneBaseClassHexxySkies:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
     local mass_vector = net_linear_acceleration_invariant:normalize()*self.ship_mass
     
-    local distribution = net_linear_acceleration_invariant:length()*4
-    local distributed_force = mass_vector*0.25
-
+    local distribution = net_linear_acceleration_invariant:length()*2
+    local distributed_force = mass_vector*0.5
+    --print(textutils.serialise(distributed_force))
     for i=0, distribution do
         table.insert(iotaPattern,IOTAS.duplicateTopStack)
         table.insert(iotaPattern,IOTAS.pushNextPatternToStack)
@@ -105,7 +105,7 @@ function DroneBaseClassHexxySkies:applyTorqueIotaPattern(iotaPattern,net_angular
                                             normalized_ang_acc.z}))
     distributed_torque = vector.new(distributed_torque[1][1],distributed_torque[2][1],distributed_torque[3][1])
     distributed_torque = distributed_torque*0.25
-
+    --print(textutils.serialise(distributed_torque:length()/self.ship_mass))
     for i=0,distribution do
         table.insert(iotaPattern,IOTAS.duplicateTopStack)
         table.insert(iotaPattern,IOTAS.pushNextPatternToStack)
@@ -118,17 +118,29 @@ end
 function DroneBaseClassHexxySkies:castHex(net_angular_acceleration,net_linear_acceleration_invariant)
     wand.clearStack()
     local position = ship.getWorldspacePosition()
+    local center_of_mass = ship.getShipyardPosition()
+    -- local iotaPattern = {
+    --     IOTAS.pushNextPatternToStack,
+    --     vector.new(position.x,position.y,position.z),
+    --     IOTAS.pushNextPatternToStack,
+    --     1,
+    --     IOTAS.scan_ships,
+    --     IOTAS.pushNextPatternToStack,
+    --     1,
+    --     IOTAS.getNthElementFromList,
+    --     IOTAS.ship_get_name,
+    -- }
     local iotaPattern = {
         IOTAS.pushNextPatternToStack,
-        vector.new(position.x,position.y,position.z),
-        IOTAS.pushNextPatternToStack,
-        1,
-        IOTAS.scan_ships,
+        vector.new(center_of_mass.x,center_of_mass.y,center_of_mass.z),
+        IOTAS.getShipByShipyardPosition,
+        --IOTAS.ship_get_name,
     }
     iotaPattern=self:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
     iotaPattern=self:applyTorqueIotaPattern(iotaPattern,net_angular_acceleration)
     wand.pushStack(iotaPattern)
     Hex:executePattern()
+    print(textutils.serialise(wand.getStack()))
 end
 
 function DroneBaseClassHexxySkies:calculateMovement()
