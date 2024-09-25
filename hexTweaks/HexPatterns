@@ -90,6 +90,14 @@ HexPatterns.IOTAS = {
             startDir = "NORTH_WEST",
             angles = "qwaeawq",
         },
+    getNthElementFromList={
+            startDir = "NORTH_WEST",
+            angles = "deeed",
+        },
+    removeNthElementFromList={
+            startDir = "SOUTH_WEST",
+            angles = "edqdewaqa",
+        },
     FIVE={
             startDir = "SOUTH_EAST",
             angles = "aqaaq",
@@ -135,6 +143,10 @@ HexPatterns.IOTAS = {
     ship_get_name={
         startDir = "EAST",
         angles = "wawwwaqwa",
+    },
+    getShipByShipyardPosition={
+        startDir = "EAST",
+        angles = "wawwwa",
     },
     getTableLength={
         startDir = "NORTH_EAST",
