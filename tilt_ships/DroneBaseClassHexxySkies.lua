@@ -1,20 +1,26 @@
 --This class only works for if you have hexxyskies and hextweaks 4.0.0
 local DroneBaseClassSP = require "lib.tilt_ships.DroneBaseClassSP"
 local flight_utilities = require "lib.flight_utilities"
+local utilities = require "lib.utilities"
 local pidcontrollers = require "lib.pidcontrollers"
 local quaternion = require "lib.quaternions"
 local HexPatterns = require "lib.hexTweaks.HexPatterns"
 local JSON = require "lib.JSON"
 local getQuaternionRotationError = flight_utilities.getQuaternionRotationError
+local clamp = utilities.clamp
 
-local wand = peripheral.find("wand")
-
-local IOTAS = HexPatterns.IOTAS
-local Hex = HexPatterns(wand)
 
 local DroneBaseClassHexxySkies = DroneBaseClassSP:subclass()
 
+function DroneBaseClassHexxySkies:initMovementPeripherals()
+    self.wand = peripheral.find("self.wand")
+    self.IOTAS = HexPatterns.IOTAS
+    self.Hex = HexPatterns(self.wand)
+end
+
 function DroneBaseClassHexxySkies:init(instance_configs)
+    self:initMovementPeripherals()
+    
 	local configs = instance_configs
 
 	configs.ship_constants_config = configs.ship_constants_config or {}
@@ -77,20 +83,21 @@ function DroneBaseClassHexxySkies:initFlightConstants()
 
     self.min_time_step = min_time_step
 	self.ship_mass = ship_mass
-	self.gravity_acceleration_vector = gravity_acceleration_vector*2 --idk why gravity is doubled when using hex forces
+	self.gravity_acceleration_vector = gravity_acceleration_vector
 end
 
-function DroneBaseClassHexxySkies:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
-    local mass_vector = net_linear_acceleration_invariant:normalize()*self.ship_mass
+function DroneBaseClassHexxySkies:applyForceIotaPattern(iotaPattern,net_linear_acceleration)
+    local mass_vector = net_linear_acceleration:normalize()*self.ship_mass
     
-    local distribution = net_linear_acceleration_invariant:length()*2
+    local distribution = net_linear_acceleration:length()*2
+    distribution = clamp(distribution,0,500)
     local distributed_force = mass_vector*0.5
     --print(textutils.serialise(distributed_force))
     for i=0, distribution do
-        table.insert(iotaPattern,IOTAS.duplicateTopStack)
-        table.insert(iotaPattern,IOTAS.pushNextPatternToStack)
+        table.insert(iotaPattern,self.IOTAS.duplicateTopStack)
+        table.insert(iotaPattern,self.IOTAS.pushNextPatternToStack)
         table.insert(iotaPattern,distributed_force)
-        table.insert(iotaPattern,IOTAS.ship_apply_force_invariant)
+        table.insert(iotaPattern,self.IOTAS.ship_apply_force_invariant)
     end
     return iotaPattern
 end
@@ -99,6 +106,7 @@ function DroneBaseClassHexxySkies:applyTorqueIotaPattern(iotaPattern,net_angular
     local normalized_ang_acc = net_angular_acceleration:normalize()
     
     local distribution = net_angular_acceleration:length()*4
+    distribution = clamp(distribution,0,500)
     local distributed_torque = matrix.mul(self.ship_constants.LOCAL_INERTIA_TENSOR,matrix({
                                             normalized_ang_acc.x,
                                             normalized_ang_acc.y,
@@ -107,40 +115,29 @@ function DroneBaseClassHexxySkies:applyTorqueIotaPattern(iotaPattern,net_angular
     distributed_torque = distributed_torque*0.25
     --print(textutils.serialise(distributed_torque:length()/self.ship_mass))
     for i=0,distribution do
-        table.insert(iotaPattern,IOTAS.duplicateTopStack)
-        table.insert(iotaPattern,IOTAS.pushNextPatternToStack)
+        table.insert(iotaPattern,self.IOTAS.duplicateTopStack)
+        table.insert(iotaPattern,self.IOTAS.pushNextPatternToStack)
         table.insert(iotaPattern,distributed_torque)
-        table.insert(iotaPattern,IOTAS.ship_apply_torque)
+        table.insert(iotaPattern,self.IOTAS.ship_apply_torque)
     end
     return iotaPattern
 end
 
-function DroneBaseClassHexxySkies:castHex(net_angular_acceleration,net_linear_acceleration_invariant)
-    wand.clearStack()
+function DroneBaseClassHexxySkies:castHex(net_linear_acceleration,net_angular_acceleration)
+    self.wand.clearStack()
     local position = ship.getWorldspacePosition()
     local center_of_mass = ship.getShipyardPosition()
-    -- local iotaPattern = {
-    --     IOTAS.pushNextPatternToStack,
-    --     vector.new(position.x,position.y,position.z),
-    --     IOTAS.pushNextPatternToStack,
-    --     1,
-    --     IOTAS.scan_ships,
-    --     IOTAS.pushNextPatternToStack,
-    --     1,
-    --     IOTAS.getNthElementFromList,
-    --     IOTAS.ship_get_name,
-    -- }
     local iotaPattern = {
-        IOTAS.pushNextPatternToStack,
+        self.IOTAS.pushNextPatternToStack,
         vector.new(center_of_mass.x,center_of_mass.y,center_of_mass.z),
-        IOTAS.getShipByShipyardPosition,
-        --IOTAS.ship_get_name,
+        self.IOTAS.getShipByShipyardPosition,
     }
-    iotaPattern=self:applyInvariantForceIotaPattern(iotaPattern,net_linear_acceleration_invariant)
-    iotaPattern=self:applyTorqueIotaPattern(iotaPattern,net_angular_acceleration)
-    wand.pushStack(iotaPattern)
-    Hex:executePattern()
-    print(textutils.serialise(wand.getStack()))
+    iotaPattern=self:applyForceIotaPattern(iotaPattern,net_linear_acceleration)
+    if(net_angular_acceleration ~= nil) then
+        iotaPattern=self:applyTorqueIotaPattern(iotaPattern,net_angular_acceleration)
+    end
+    self.wand.pushStack(iotaPattern)
+    self.Hex:executePattern()
 end
 
 function DroneBaseClassHexxySkies:calculateMovement()
@@ -169,10 +166,10 @@ function DroneBaseClassHexxySkies:calculateMovement()
         
         local pid_output_angular_acceleration,pid_output_linear_acceleration_invariant = self:calculateFeedbackControlValues(self.error)
 
-        local net_linear_acceleration_invariant = pid_output_linear_acceleration_invariant - self.gravity_acceleration_vector
+        local net_linear_acceleration_invariant = pid_output_linear_acceleration_invariant - self.gravity_acceleration_vector*2 --idk why gravity is doubled when using hex forces
         local net_angular_acceleration = pid_output_angular_acceleration
 
-        self:castHex(net_angular_acceleration,net_linear_acceleration_invariant)
+        self:castHex(net_linear_acceleration_invariant,net_angular_acceleration)
         sleep(self.min_time_step)
     end
 
