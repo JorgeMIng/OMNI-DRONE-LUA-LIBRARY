@@ -11,14 +11,13 @@ local clamp_vector3 = utilities.clamp_vector3
 
 local DroneBaseClassKontraption = DroneBaseClassSP:subclass()
 
-function DroneBaseClassKontraption:initShipTerminal()
-    print("ssSS")
+function DroneBaseClassKontraption:initMovementPeripherals()
     self.shipControl=peripheral.find("shipControlInterface") --for 1.18.2
 end
 
 function DroneBaseClassKontraption:init(instance_configs)
 
-    self:initShipTerminal()
+    self:initMovementPeripherals()
 
 	local configs = instance_configs
 
