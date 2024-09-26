@@ -2,7 +2,7 @@ local quaternion = require "lib.quaternions"
 local flight_utilities = require "lib.flight_utilities"
 
 
-local DroneBaseClassKontraption = require "lib.tilt_ships.DroneBaseClassKontraption"
+local DroneBaseClassKontraptionHexxySkiesHybrid = require "lib.tilt_ships.DroneBaseClassKontraptionHexxySkiesHybrid"
 local Object = require "lib.object.Object"
 
 local getLocalPositionError = flight_utilities.getLocalPositionError
@@ -11,7 +11,7 @@ local Panabas = Object:subclass()
 
 --overridable functions--
 function Panabas:setShipFrameClass(configs) --override this to set ShipFrame Template
-	self.ShipFrame = DroneBaseClassKontraption(configs)
+	self.ShipFrame = DroneBaseClassKontraptionHexxySkiesHybrid(configs)
 end
 --overridable functions--
 
@@ -27,15 +27,15 @@ function Panabas:initializeShipFrameClass(instance_configs)
 	configs.ship_constants_config.PID_SETTINGS = configs.ship_constants_config.PID_SETTINGS or
 	{
 		POS = {
-			P = 0.7,
-			I = 0.001,
-			D = 1
+			P=7,
+            I=1,
+            D=8,
 		},
         VEL = {
-			P=0.04,
-            I=0.001,
-            D=0.05,
-		}
+			P = 1,
+			I = 0,
+			D = 0
+		},
 	}
 	
 	configs.radar_config = configs.radar_config or {}
@@ -117,14 +117,13 @@ function Panabas:overrideInitFeedbackControllers()
 			self.lateral_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.POS.P,
 																	self.ship_constants.PID_SETTINGS.POS.I,
 																	self.ship_constants.PID_SETTINGS.POS.D,
-																	-1,1)
+																	-self.ship_constants.MAX_ACCELERATION_LINEAR,self.ship_constants.MAX_ACCELERATION_LINEAR)
 			return
 		end
-
 		self.lateral_PID = pidcontrollers.PID_Discrete_Vector(	self.ship_constants.PID_SETTINGS.VEL.P,
 																self.ship_constants.PID_SETTINGS.VEL.I,
 																self.ship_constants.PID_SETTINGS.VEL.D,
-																-1,1)
+																-self.ship_constants.MAX_ACCELERATION_LINEAR,self.ship_constants.MAX_ACCELERATION_LINEAR)
 	end
 end
 
@@ -144,6 +143,9 @@ end
 function Panabas:overrideCalculateFeedbackControlValues()
 	local panabas = self
 	function self.ShipFrame:calculateFeedbackControlValues(error)
+		if(not panabas.blade_mode) then
+			return 	self.lateral_PID:run(error)/self.min_time_step
+		end
 		return 	self.lateral_PID:run(error)
 	end
 end
@@ -198,8 +200,9 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 			self.error
 		]]--
 		self.target_global_velocity = vector.new(0,0,0)
-		
+		--self:debugProbe({target_global_velocity=self.target_global_velocity,error=self.error})
 		if (not self.remoteControlManager.rc_variables.run_mode) then
+			
 			panabas:safetyOn(true)
 			
 			return
@@ -232,14 +235,17 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 
 			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
 			self.target_global_position = formation_position + target_orbit_position
+			
 		else
 			panabas:safetyOn(false)
 			panabas.remote_move_angular = panabas.remote_move_angular * 10
 			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveX(),panabas.remote_move_angular.x)*self.target_rotation
 			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.remote_move_angular.y)*self.target_rotation
 			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveZ(),panabas.remote_move_angular.z)*self.target_rotation
-			self.target_global_velocity = self.ship_rotation:rotateVector3(panabas.remote_move_linear)*30
+			self.target_global_velocity = self.ship_rotation:rotateVector3(panabas.remote_move_linear)*50
+			
 		end
+		
 	end
 end
 
@@ -253,6 +259,7 @@ function Panabas:init(instance_configs)
 	self:overrideShipFrameCustomProtocols()
 	self:overrideShipFrameGetCustomSettings()
 	self:overrideShipFrameCustomFlightLoopBehavior()
+	--self:overridecalculateMovement()
 
 	omniship_custom_config = instance_configs.omniship_custom_config or {}
 
