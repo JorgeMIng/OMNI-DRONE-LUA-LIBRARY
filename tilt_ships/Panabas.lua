@@ -186,7 +186,7 @@ end
 
 
 function Panabas:safetyOn(active)
-	redstone.setOutput("top",active)
+	redstone.setOutput("right",active)
 end
 
 function Panabas:overrideShipFrameCustomFlightLoopBehavior()
@@ -242,7 +242,7 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveX(),panabas.remote_move_angular.x)*self.target_rotation
 			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveY(),panabas.remote_move_angular.y)*self.target_rotation
 			self.target_rotation = quaternion.fromRotation(self.target_rotation:localPositiveZ(),panabas.remote_move_angular.z)*self.target_rotation
-			self.target_global_velocity = self.ship_rotation:rotateVector3(panabas.remote_move_linear)*50
+			self.target_global_velocity = self.ship_rotation:rotateVector3(panabas.remote_move_linear)*100
 			
 		end
 		
