@@ -28,7 +28,7 @@ function Panabas:initializeShipFrameClass(instance_configs)
 	{
 		POS = {
 			P=7,
-            I=1,
+            I=0,
             D=8,
 		},
         VEL = {
