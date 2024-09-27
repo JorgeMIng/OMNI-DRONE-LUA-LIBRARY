@@ -262,7 +262,7 @@ function HexPatterns:repelandFireballEntityIota(pulse_origin,pulse_magnitude,fir
         self.IOTAS.multiply,
         self.IOTAS.impulse,
 
-        unpack(fireballEntityIota(fireball_strength))
+        unpack(self:fireballEntityIota(fireball_strength))
         
     }
 end
