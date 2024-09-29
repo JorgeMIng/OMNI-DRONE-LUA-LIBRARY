@@ -156,7 +156,9 @@ function Panabas:pointBlade(direction,args)
 	local remote_move_angular = args.remote_move_angular
 	local point = args.point
 	target_rotation = target_orbit_orientation
+	target_rotation = quaternion.fromToRotation(target_rotation:localPositiveZ(),target_orbit_orientation:localPositiveY())*target_rotation
 	target_rotation = quaternion.fromToRotation(target_rotation:localPositiveY()*point,direction)*target_rotation
+	target_rotation = quaternion.fromToRotation(target_rotation:localPositiveZ(),target_orbit_orientation:localPositiveY())*target_rotation
 	if(remote_move_angular.y>0)then
 		self.bladeTwistPose = math.fmod(self.bladeTwistPose+1,4)
 	elseif(remote_move_angular.y<0)then
@@ -172,7 +174,10 @@ function Panabas:poseBlade(key,args)
 	local pose={
 		["point"]=function(args)
 			local target_orbit_orientation = args.target_orbit_orientation
-			return self:pointBlade(target_orbit_orientation:localPositiveZ(),args)
+			local target_orbit_position = args.target_orbit_position
+			local blade_direction = self.ShipFrame.target_global_position - target_orbit_position
+			--return self:pointBlade(target_orbit_orientation:localPositiveZ(),args)
+			return self:pointBlade(blade_direction:normalize(),args)
 		end,
 		["guard"]=function(args)
 			local target_orbit_orientation = args.target_orbit_orientation
@@ -215,10 +220,14 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 		if(panabas.blade_mode) then
 			
 			panabas:safetyOn(not panabas.axe_mode)
+			
+			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
+			self.target_global_position = formation_position + target_orbit_position
 
 			local point = panabas.axe_mode and 1 or -1
 			local blade_pose_arguments = {	target_rotation=self.target_rotation,
 											target_orbit_orientation=target_orbit_orientation,
+											target_orbit_position = target_orbit_position,
 											point=point,
 											remote_move_angular=panabas.remote_move_angular}
 			
@@ -233,8 +242,7 @@ function Panabas:overrideShipFrameCustomFlightLoopBehavior()
 				self.target_rotation = panabas:poseBlade("point",blade_pose_arguments)
 			end
 
-			local formation_position = target_orbit_orientation:rotateVector3(self.remoteControlManager.rc_variables.orbit_offset)
-			self.target_global_position = formation_position + target_orbit_position
+			
 			
 		else
 			panabas:safetyOn(false)
