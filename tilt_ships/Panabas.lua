@@ -174,9 +174,11 @@ function Panabas:poseBlade(key,args)
 	local pose={
 		["point"]=function(args)
 			local target_orbit_orientation = args.target_orbit_orientation
-			local target_orbit_position = args.target_orbit_position
+			local position_offset = target_orbit_orientation:localPositiveX()*-25
+			
+			local target_orbit_position = args.target_orbit_position + position_offset
 			local blade_direction = self.ShipFrame.target_global_position - target_orbit_position
-			--return self:pointBlade(target_orbit_orientation:localPositiveZ(),args)
+			self.ShipFrame:debugProbe({blade_direction=blade_direction})
 			return self:pointBlade(blade_direction:normalize(),args)
 		end,
 		["guard"]=function(args)
