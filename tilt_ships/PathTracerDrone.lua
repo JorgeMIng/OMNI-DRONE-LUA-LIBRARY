@@ -144,6 +144,7 @@ function PathTracerDrone:overrideShipFrameCustomFlightLoopBehavior()
 		--self:debugProbe({auto_aim=self:getAutoAim()})
 		--self:debugProbe({"yet running..."})
 		--self:debugProbe({pos_err=(self.position_error):length()})
+		ptd:droneCustomFlightLoopBehavior()
 		if (not self.remoteControlManager.rc_variables.run_mode) then
 			return;
 		end
@@ -176,7 +177,7 @@ function PathTracerDrone:overrideShipFrameCustomFlightLoopBehavior()
 
 		ptd.prev_time = current_time
 
-		ptd:droneCustomFlightLoopBehavior()
+		
 	end
 end
 
