@@ -66,7 +66,6 @@ end
 
 
 function DroneBaseClassKontraption:initFlightConstants()
-    local min_time_step = 0.05 --how fast the computer should continuously loop (the max is 0.05 for ComputerCraft)
 	local ship_mass = self.sensors.shipReader:getMass()
 
     --CONFIGURABLES--
@@ -87,7 +86,7 @@ function DroneBaseClassKontraption:initFlightConstants()
     net_base_thrust.neg = net_base_thrust.neg + self.ship_constants.LIQUID_FUEL_THRUSTER_FORCE.pos
     ]]--
 
-    self.min_time_step = min_time_step
+    self.min_time_step = self.ship_constants.min_time_step or 0.05 --how fast the computer should continuously loop (the max is 0.05 for ComputerCraft)
 	self.ship_mass = ship_mass
 	self.gravity_acceleration_vector = gravity_acceleration_vector
     self.net_base_thrust = net_base_thrust

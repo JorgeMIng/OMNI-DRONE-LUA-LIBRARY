@@ -226,8 +226,6 @@ end
 
 --redstone:
 function DroneBaseClassSP:initFlightConstants()
-	
-	local min_time_step = 0.05 --how fast the computer should continuously loop (the max is 0.05 for ComputerCraft)
 	local ship_mass = self.sensors.shipReader:getMass()
 	local gravity_acceleration_vector = vector.new(0,-9.8,0)
 	
@@ -309,7 +307,7 @@ function DroneBaseClassSP:initFlightConstants()
 	-- h.flush()
 	-- h.close()
 
-	self.min_time_step = min_time_step
+	self.min_time_step = self.ship_constants.min_time_step or 0.05 --how fast the computer should continuously loop (the max is 0.05 for ComputerCraft)
 	self.ship_mass = ship_mass
 	self.gravity_acceleration_vector = gravity_acceleration_vector
 	self.JACOBIAN_TRANSPOSE = JACOBIAN_TRANSPOSE
