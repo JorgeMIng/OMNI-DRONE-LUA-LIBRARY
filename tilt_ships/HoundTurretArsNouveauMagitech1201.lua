@@ -1,7 +1,7 @@
 --OpenCU is not available in 1.20.1 yet. Install a MindSplice Staff From Hexcasting as a side peripheral (make sure to have HexTweaks installed)
 local HoundTurretBase = require "lib.tilt_ships.HoundTurretBase"
 local HoundTurretArsNouveauMagitech = require "lib.tilt_ships.HoundTurretArsNouveauMagitech"
-local DroneBaseClassKontraption1201 = require "lib.tilt_ships.DroneBaseClassKontraption1201"
+local DroneBaseClassKontraption = require "lib.tilt_ships.DroneBaseClassKontraption"
 local HexPatterns = require "lib.hexTweaks.HexPatterns"
 local utilities = require"lib.utilities"
 local quaternion = require "lib.quaternions"
@@ -32,7 +32,7 @@ local HoundTurretArsNouveauMagitech1201 = HoundTurretArsNouveauMagitech:subclass
 
 --overridden functions--
 function HoundTurretArsNouveauMagitech1201:setShipFrameClass(configs)
-	self.ShipFrame = DroneBaseClassKontraption1201(configs)
+	self.ShipFrame = DroneBaseClassKontraption(configs)
 end
 
 function HoundTurretArsNouveauMagitech1201:onGunsActivation()

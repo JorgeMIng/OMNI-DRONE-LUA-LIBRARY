@@ -12,7 +12,11 @@ local clamp_vector3 = utilities.clamp_vector3
 local DroneBaseClassKontraption = DroneBaseClassSP:subclass()
 
 function DroneBaseClassKontraption:initMovementPeripherals()
-    self.shipControl=peripheral.find("shipControlInterface") --for 1.18.2
+    local shipTerminalPeripheralName = "shipControlInterface" --for 1.18.2
+    if(string.find(_HOST,"Minecraft 1.20.1")) then
+        shipTerminalPeripheralName = "ShipControlInterface"
+    end
+    self.shipControl=peripheral.find(shipTerminalPeripheralName)
 end
 
 function DroneBaseClassKontraption:init(instance_configs)
