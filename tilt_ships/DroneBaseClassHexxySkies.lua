@@ -13,7 +13,7 @@ local clamp = utilities.clamp
 local DroneBaseClassHexxySkies = DroneBaseClassSP:subclass()
 
 function DroneBaseClassHexxySkies:initMovementPeripherals()
-    self.wand = peripheral.find("self.wand")
+    self.wand = peripheral.find("wand")
     self.IOTAS = HexPatterns.IOTAS
     self.Hex = HexPatterns(self.wand)
 end
