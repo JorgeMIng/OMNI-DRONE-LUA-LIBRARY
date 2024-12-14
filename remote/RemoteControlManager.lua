@@ -3,24 +3,20 @@ local Object = require "lib.object.Object"
 local RemoteControlManager = Object:subclass()
 
 --OVERRIDABLE FUNCTIONS--
-function RemoteControlManager:customRCProtocols(msg)
-	local command = msg.cmd
-	command = command and tonumber(command) or command
-	case =
-	{
-	["custom actions here"] = function (args)
-		--custom actions here
+function RemoteControlManager:getProtocols()
+	return {
+	
+	["set_settings"] = function (msg)
+		if (tostring(msg.drone_type) == tostring(self.DRONE_TYPE)) then
+			self:setSettings(msg.args)
+		end
 	end,
-	 default = function ( )
-		print(textutils.serialize(command)) 
-		print("customRCProtocols: default case executed")   
+	["get_settings_info"] = function (args)
+		self:transmitCurrentSettingsToController()
 	end,
-	}
-	if case[command] then
-	 case[command](msg.args)
-	else
-	 case["default"]()
+	 ["default"] = function ( )
 	end
+	}
 end
 
 function RemoteControlManager:getCustomSettings()
@@ -56,44 +52,15 @@ end
 
 
 function RemoteControlManager:protocols(msg)
-	local command = msg.cmd
-	command = command and tonumber(command) or command
-	case =
-	{
-		["dynamic_positioning_mode"] = function (mode)
-			self.rc_variables.dynamic_positioning_mode = mode
-		end,
-		["player_mounting_ship"] = function (mode)
-			self.rc_variables.player_mounting_ship = mode
-		end,
-		["orbit_offset"] = function (pos_vec)
-			self.rc_variables.orbit_offset = pos_vec
-		end,
-		["set_settings"] = function (msg)
-			if (tostring(msg.drone_type) == tostring(self.DRONE_TYPE)) then
-				self:setSettings(msg.args)
-			end
-		end,
-		["get_settings_info"] = function (args)
-			self:transmitCurrentSettingsToController()
-		end,
-		 default = function ( )
-			self:customRCProtocols(msg)
-		end,
-	}
-	if case[command] then
-	 case[command](msg.args)
-	else
-	 case["default"]()
-	end
+	return Rec.rec_switch_custum(msg.cmd,msg.args,"getProtocols",self,RemoteControlManager,{conservedOld=true,protected_cases={},defaultFunc={}})
 end
 
 function RemoteControlManager:init(configs)--
 	
-	self.DRONE_ID = configs.ship_constants_config.DRONE_ID
-	self.DRONE_TYPE = configs.ship_constants_config.DRONE_TYPE
-	self.DRONE_TO_REMOTE_CHANNEL = configs.channels_config.DRONE_TO_REMOTE_CHANNEL
-	self.REPLY_DUMP_CHANNEL = configs.channels_config.REPLY_DUMP_CHANNEL
+	self.DRONE_ID = configs.DRONE_ID
+	self.DRONE_TYPE = configs.DRONE_TYPE
+	self.DRONE_TO_REMOTE_CHANNEL = configs.DRONE_TO_REMOTE_CHANNEL
+	self.REPLY_DUMP_CHANNEL = configs.REPLY_DUMP_CHANNEL
 	self.modem = configs.modem
 	self.rc_variables = {
 		dynamic_positioning_mode = false,--deactivate to have drone act like stationary turret
@@ -111,6 +78,7 @@ end
 
 function RemoteControlManager:transmitCurrentSettingsToController()
 	print("transmitCurrentSettingsToController")
+	
 	local msg = {drone_ID=self.DRONE_ID,protocol="drone_settings_update",partial_profile={settings=self:getSettings(),drone_type=self.DRONE_TYPE}}
 	self:transmitToController(msg)
 end

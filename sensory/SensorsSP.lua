@@ -76,7 +76,7 @@ function SensorsSP:RadarSystems(radar_arguments)
 											velocity=ship.velocity}
 								end
 								self.targeted_ships_undetected = true
-								return nil
+								return "nil"
 							end,
 							
 				["PLAYER"] = function (is_auto_aim)

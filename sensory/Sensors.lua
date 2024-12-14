@@ -32,7 +32,7 @@ end
 function Sensors:initRadar(radar_config)
 	radar_config = radar_config or {}
 	radar_config.designated_ship_id = radar_config.designated_ship_id or "0"
-	radar_config.designated_player_name=radar_config.designated_player_name or "PHO"
+	radar_config.designated_player_name=radar_config.designated_player_name or "Yordi111"
 	radar_config.ship_id_whitelist=radar_config.ship_id_whitelist or {}
 	radar_config.player_name_whitelist=radar_config.player_name_whitelist or {}
 

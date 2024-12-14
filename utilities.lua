@@ -34,6 +34,34 @@ function utilities.clamp(x, min, max)--benchmark speed: 0.027751 seconds
     return x
 end
 
+
+
+--[[ 
+function len(table) return len of table
+]]--
+
+function utilities.lenTable(table)
+	local count=0
+	
+	if (not table) then
+		return 0
+	end
+	for _ in pairs(table)do 
+		count=count+1
+	end
+	return count
+end
+
+
+
+
+
+
+
+
+
+
+
 --[[
 -- fast but we can do without it returning 0
 function sign(x)
@@ -137,6 +165,8 @@ function utilities.PwmMatrix(init_row,init_column)
 	end
 	}
 end
+
+
 
 function utilities.PwmMatrixList(list_size)
 	local l = {}

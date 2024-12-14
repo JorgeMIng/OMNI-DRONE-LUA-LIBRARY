@@ -95,10 +95,8 @@ end
 --overridden functions--
 function BodySegmentDrone:overrideShipFrameCustomProtocols()
 	local bsd = self
-	function self.ShipFrame:customProtocols(msg)
-		local command = msg.cmd
-		command = command and tonumber(command) or command
-		case =
+	function self.ShipFrame:getProtocols()
+		return 
 		{
 		["segment_delay"] = function (arguments)
 			bsd:setSegmentDelay(arguments)
@@ -109,21 +107,13 @@ function BodySegmentDrone:overrideShipFrameCustomProtocols()
 		["add_target_spatial"] = function (arguments)
 			bsd:addTargetSpatial(arguments)
 		end,
-		["HUSH"] = function (args) --kill command
+		["hush"] = function (args) --kill command
 			self:resetRedstone()
 			print("reseting redstone")
 			self.run_firmware = false
-		end,
-		default = function ( )
-			print(textutils.serialize(command)) 
-			print("customHoundProtocols: default case executed")   
-		end,
-		}
-		if case[command] then
-		 case[command](msg.args)
-		else
-		 case["default"]()
 		end
+		}
+		
 	end
 end
 

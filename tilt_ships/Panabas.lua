@@ -75,10 +75,8 @@ end
 --overridden functions--
 function Panabas:overrideShipFrameCustomProtocols()
 	local panabas = self
-	function self.ShipFrame:customProtocols(msg)
-		local command = msg.cmd
-		command = command and tonumber(command) or command
-		case =
+	function self.ShipFrame:getProtocols()
+		return
 		{
 			["blade_mode"]= function (args)
 				panabas.blade_mode = not panabas.blade_mode
@@ -92,17 +90,7 @@ function Panabas:overrideShipFrameCustomProtocols()
 				local angle = vector.new(arg.angular.x,arg.angular.y,arg.angular.z)
 				panabas.remote_move_angular = angle
 			end,
-
-			default = function ( )
-				print(textutils.serialize(command)) 
-				print("Panabas: default case executed")
-			end,
 		}
-		if case[command] then
-		 case[command](msg.args)
-		else
-		 case["default"]()
-		end
 	end
 end
 Panabas.remote_move_linear = vector.new(0,0,0)

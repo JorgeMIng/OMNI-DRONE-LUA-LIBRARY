@@ -6,6 +6,10 @@ local player_spatial_utilities = require "lib.player_spatial_utilities"
 local flight_utilities = require "lib.flight_utilities"
 local RemoteControlManager = require "lib.remote.RemoteControlManager"
 
+
+local Rec = require "lib.utilities_recursive"
+
+
 local Sensors = require "lib.sensory.Sensors"
 
 local Object = require "lib.object.Object"
@@ -49,24 +53,71 @@ function DroneBaseClass:composeComponentMessage(linear,angular)
 			"custom_message_here",}
 end
 
-function DroneBaseClass:customProtocols(msg)
-	local command = msg.cmd
-	command = command and tonumber(command) or command
-	case =
-	{
-	["custom actions here"] = function (args)
-		--custom actions here
-	end,
-	 default = function ( )
-		print(textutils.serialize(command)) 
-		print("customProtocols: default case executed")   
-	end,
-	}
-	if case[command] then
-	 case[command](msg.args)
-	else
-	 case["default"]()
-	end
+function DroneBaseClass:getProtocols()
+	
+	return {
+		["scroll_aim_target"] = function (arguments)
+			if (self:getAutoAim()) then
+				if (arguments.args>0) then
+					self:scrollUpShipTargets()
+					self:scrollUpPlayerTargets()
+				else
+					self:scrollDownShipTargets()
+					self:scrollDownPlayerTargets()
+				end
+			end
+		end,
+		["run_mode"] = function (mode)
+			self.rc_variables.run_mode = mode
+		end,
+		
+		["auto_aim"] = function (mode)
+			self:setAutoAim(mode)
+		end,
+		["use_external_radar"] = function (args)
+			self:useExternalRadar(args.is_aim,args.mode)
+		end,
+		["set_target_mode"] = function (args)
+			--print("set_target_mode:", args.is_aim,args.mode)
+			self:setTargetMode(args.is_aim,args.mode)
+			--print("getTargetMode:", self:getTargetMode(false))
+		end,
+		["designate_to_player"] = function (designation)
+			self:setDesignatedMaster(true,designation)
+		end,
+		["designate_to_ship"] = function (designation)
+			self:setDesignatedMaster(false,designation)
+		end,
+		["add_to_whitelist"] = function (args)
+			self:addToWhitelist(args.is_player,args.designation)
+		end,
+		["remove_from_whitelist"] = function (args)
+			self:removeFromWhitelist(args.is_player,args.designation)
+		end,
+		["realign"] = function (args)
+			self.target_rotation = quaternion.fromRotation(vector.new(0,1,0), 0)
+		end,
+		["hush"] = function (args) --kill command
+			self:resetRedstone()
+			self.run_firmware = false
+		end,
+		["restart"] = function (args) --kill command
+			self:resetRedstone()
+			os.reboot()
+		end,
+		["dynamic_positioning_mode"] = function (mode)
+			self.rc_variables.dynamic_positioning_mode = mode
+		end,
+		["player_mounting_ship"] = function (mode)
+			self.rc_variables.player_mounting_ship = mode
+		end,
+		["orbit_offset"] = function (pos_vec)
+			self.rc_variables.orbit_offset = pos_vec
+		end,
+		["default"] = function ()
+			--print("default was executed")
+		end
+		}
 end
 
 function DroneBaseClass:customPreFlightLoopBehavior(customFlightVariables) end
@@ -124,33 +175,22 @@ function DroneBaseClass:init(configs)
 	self:addTargetingSystemThreads()
 end
 
-function DroneBaseClass:initRemoteControl(configs)
+function DroneBaseClass:initRemoteControl(config)
 	local dbc = self
-	configs.rc_variables = configs.rc_variables or {}
 	
-	configs.rc_variables.run_mode = configs.rc_variables.run_mode or false
-	configs.modem = self.modem
-	self.remoteControlManager = RemoteControlManager(configs)
+	config.DRONE_TO_REMOTE_CHANNEL = config.channels_config.DRONE_TO_REMOTE_CHANNEL or 0
+	config.REPLY_DUMP_CHANNEL = config.channels_config.REPLY_DUMP_CHANNEL or 0
+	config.DRONE_ID = self.ship_constants.DRONE_ID
+	config.DRONE_TYPE = self.ship_constants.DRONE_TYPE
+
+	config.rc_variables = config.rc_variables or {}
+	config.rc_variables.run_mode = config.rc_variables.run_mode or false
+	config.modem = self.modem
 	
-	function self.remoteControlManager:customRCProtocols(msg)
-		local command = msg.cmd
-		command = command and tonumber(command) or command
-		case =
-		{
-		["run_mode"] = function (mode)
-			self.rc_variables.run_mode = mode
-		end,
-		 default = function ( )
-			print(textutils.serialize(command)) 
-			print("customRCProtocols: default case executed")   
-		end,
-		}
-		if case[command] then
-		 case[command](msg.args)
-		else
-		 case["default"]()
-		end
-	end
+	self.remoteControlManager = RemoteControlManager(config)
+	
+	
+
 	
 	function self.remoteControlManager:getSettings()
 
@@ -280,7 +320,7 @@ function DroneBaseClass:initConstants(ship_constants_config)
 		LOCAL_INERTIA_TENSOR = inertia_tensors[1],
 		LOCAL_INV_INERTIA_TENSOR = inertia_tensors[2],
 
-		DRONE_ID = self.MY_SHIP_ID,
+		DRONE_ID = self.sensors.shipReader:getShipID(),
 		DRONE_TYPE = "DEFAULT",
 		DEFAULT_NEW_LOCAL_SHIP_ORIENTATION = self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0)), --based on static ship world orientation (rotated from how it was built in the world grid)
 		
@@ -470,67 +510,10 @@ function DroneBaseClass:protocols(msg)
 			{drone_id=drone,msg={cmd=cmd,args=args}}
 			)
 	]]--
-	local command = msg.cmd
-	command = command and tonumber(command) or command
-	case =
-	{
-	["scroll_aim_target"] = function (arguments)
-		if (self:getAutoAim()) then
-			if (arguments.args>0) then
-				self:scrollUpShipTargets()
-				self:scrollUpPlayerTargets()
-			else
-				self:scrollDownShipTargets()
-				self:scrollDownPlayerTargets()
-			end
-		end
-	end,
 	
-	["auto_aim"] = function (mode)
-		self:setAutoAim(mode)
-	end,
-	["use_external_radar"] = function (args)
-		self:useExternalRadar(args.is_aim,args.mode)
-	end,
-	["set_target_mode"] = function (args)
-		--print("set_target_mode:", args.is_aim,args.mode)
-		self:setTargetMode(args.is_aim,args.mode)
-		--print("getTargetMode:", self:getTargetMode(false))
-	end,
-	["designate_to_player"] = function (designation)
-		self:setDesignatedMaster(true,designation)
-	end,
-	["designate_to_ship"] = function (designation)
-		self:setDesignatedMaster(false,designation)
-	end,
-	["add_to_whitelist"] = function (args)
-		self:addToWhitelist(args.is_player,args.designation)
-	end,
-	["remove_from_whitelist"] = function (args)
-		self:removeFromWhitelist(args.is_player,args.designation)
-	end,
-	["realign"] = function (args)
-		self.target_rotation = quaternion.fromRotation(vector.new(0,1,0), 0)
-	end,
-	["hush"] = function (args) --kill command
-		self:resetRedstone()
-		self.run_firmware = false
-	end,
-	["restart"] = function (args) --kill command
-		self:resetRedstone()
-		os.reboot()
-	end,
-	 default = function ()
-		self.remoteControlManager:protocols(msg)
-		self:customProtocols(msg)
-	end,
-	}
-	if case[command] then
-	 case[command](msg.args)
-	else
-	 case["default"]()
-	end
+	return Rec.rec_switch_custum(msg.cmd,msg.args,"getProtocols",self,DroneBaseClass,{conservedOld=true,protected_cases=self.remoteControlManager:getProtocols(),defaultFunc={}})
 end
+	
 --COMMUNICATION FUNCTIONS--
 
 
@@ -816,7 +799,11 @@ function DroneBaseClass:checkInterupt()
 	
 end
 
+
+
 function DroneBaseClass:run()
+	
+	
 	parallel.waitForAny(unpack(self.threads))
 	
 end

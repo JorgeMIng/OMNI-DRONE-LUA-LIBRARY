@@ -103,7 +103,7 @@ function DroneBaseClassSP:initSensors(configs)
 end
 
 function DroneBaseClassSP:initSensorRadar(radar_config)
-	radar_config.radar_range=radar_config.radar_range or 200
+	radar_config.radar_range=radar_config.radar_range or 50
 	self.sensors:initRadar(radar_config)
 end
 

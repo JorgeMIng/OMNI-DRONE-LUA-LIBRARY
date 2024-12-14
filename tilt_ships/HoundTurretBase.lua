@@ -310,10 +310,8 @@ end
 --overridden functions--
 function HoundTurretBase:overrideShipFrameCustomProtocols()
 	local htb = self
-	function self.ShipFrame:customProtocols(msg)
-		local command = msg.cmd
-		command = command and tonumber(command) or command
-		case =
+	function self.ShipFrame:getProtocols()
+		return 
 		{
 		["set_range_finding_mode"] = function (arguments)--1:manual ; 2:auto ; 3:auto-external
 			htb:setRangeFindingMode(arguments.mode)
@@ -333,21 +331,12 @@ function HoundTurretBase:overrideShipFrameCustomProtocols()
 		["weapons_free"] = function (arguments)
 			htb:setWeaponsFree(arguments.args)
 		end,
-		["HUSH"] = function (args) --kill command
+		["hush"] = function (args) --kill command
 			self:resetRedstone()
 			print("reseting redstone")
 			self.run_firmware = false
 		end,
-		default = function ( )
-			print(textutils.serialize(command)) 
-			print("customHoundProtocols: default case executed")   
-		end,
 		}
-		if case[command] then
-		 case[command](msg.args)
-		else
-		 case["default"]()
-		end
 	end
 end
 

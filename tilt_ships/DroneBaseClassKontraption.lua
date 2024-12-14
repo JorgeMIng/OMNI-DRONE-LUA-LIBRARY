@@ -2,6 +2,7 @@ local DroneBaseClassSP = require "lib.tilt_ships.DroneBaseClassSP"
 local flight_utilities = require "lib.flight_utilities"
 local pidcontrollers = require "lib.pidcontrollers"
 local quaternion = require "lib.quaternions"
+local utilities = require "lib.utilities"
 
 local getLocalPositionError = flight_utilities.getLocalPositionError
 local clamp_vector3 = utilities.clamp_vector3
@@ -22,7 +23,7 @@ end
 function DroneBaseClassKontraption:init(instance_configs)
 
     self:initMovementPeripherals()
-
+    
 	local configs = instance_configs
 
 	configs.ship_constants_config = configs.ship_constants_config or {}
@@ -46,10 +47,23 @@ function DroneBaseClassKontraption:init(instance_configs)
         pos=vector.new(2,2,2),
         neg=vector.new(2,2,2)
     }
+    configs.ship_constants_config.DRONE_TYPE = "TURRET"
 
     configs.ship_constants_config.IONTHRUST_CONFIG = configs.ship_constants_config.IONTHRUST_CONFIG or 4
-
+    
 	DroneBaseClassKontraption.superClass.init(self,configs)
+
+    local msg="hello world"
+    print("what",self.ship_constants.DRONE_ID)
+    print(self.remoteControlManager)
+    self:debugProbe({msg})
+    print("settings",self.remoteControlManager:getSettings().master_player)
+    
+
+    --if self.sensors.radars:getRadarTarget("PLAYER",false) then
+       -- print("player",self.sensors.radars:getRadarTarget("PLAYER",false).position)
+    --end
+    
 end
 
 function DroneBaseClassKontraption:initFeedbackControllers()
@@ -114,6 +128,9 @@ function DroneBaseClassKontraption:calculateMovement()
         if(self.ship_mass ~= self.sensors.shipReader:getMass()) then
 			self:initFlightConstants()
 		end
+        
+        --print("targets",#self.sensors.radars.targeting.ship_targets)
+        
         
         self:customFlightLoopBehavior(customFlightVariables)
         self.ship_rotation = self.sensors.shipReader:getRotation(true)

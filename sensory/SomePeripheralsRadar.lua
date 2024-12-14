@@ -100,10 +100,12 @@ function SomePeripheralsRadar:Targeting(arguments)
 		
 		getShipTarget = function(self,is_auto_aim)
 			if (spr.peripheral) then
+				
 				local scanned_targets = self.ship_targets
 				if (scanned_targets) then
 					local list_size = #scanned_targets
 					self.shipListScroller:updateListSize(list_size)
+					
 					if (list_size>1) then
 						if (is_auto_aim) then
 							local target = self.shipListScroller:getCurrentItem(scanned_targets)
@@ -121,6 +123,8 @@ function SomePeripheralsRadar:Targeting(arguments)
 								return self.shipListScroller:getCurrentItem(scanned_targets)
 							end
 						else
+							
+							
 							if (type(scanned_targets) == "table") then
 								for i,trg in ipairs(scanned_targets) do
 									if (tostring(trg.id) == tostring(self.designated_ship_id)) then
@@ -160,7 +164,9 @@ function SomePeripheralsRadar:Targeting(arguments)
 						end
 					else
 						if (type(scanned_targets) == "table") then
+							print("working")
 							for i,trg in ipairs(scanned_targets) do
+								print("Detected",trg.nickname)
 								if (tostring(trg.nickname) == tostring(self.designated_player_name)) then
 									return trg
 								end

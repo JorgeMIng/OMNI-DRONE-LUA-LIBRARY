@@ -90,30 +90,18 @@ end
 --overridden functions--
 function PathTracerDrone:overrideShipFrameCustomProtocols()
 	local ptd = self
-	function self.ShipFrame:customProtocols(msg)
-		local command = msg.cmd
-		command = command and tonumber(command) or command
-		case =
-		{
+	function self.ShipFrame:getProtocols()
+		return{
 		["walk"] = function (arguments)
 			--print("setting walk ",arguments)
 			ptd:setWalk(arguments)
 		end,
-		["HUSH"] = function (args) --kill command
+		["hush"] = function (args) --kill command
 			self:resetRedstone()
 			print("reseting redstone")
 			self.run_firmware = false
-		end,
-		default = function ( )
-			print(textutils.serialize(command)) 
-			print("customHoundProtocols: default case executed")   
-		end,
-		}
-		if case[command] then
-		 case[command](msg.args)
-		else
-		 case["default"]()
 		end
+		}
 	end
 end
 

@@ -81,11 +81,8 @@ end
 --overridden functions--
 function ImmortalShipBase:overrideShipFrameCustomProtocols()
 	local ImmortalShipBase = self
-	function self.ShipFrame:customProtocols(msg)
-		local command = msg.cmd
-		command = command and tonumber(command) or command
-		case =
-		{
+	function self.ShipFrame:getProtocols()	
+		return{
 			["blade_mode"]= function (args)
 				ImmortalShipBase.blade_mode = not ImmortalShipBase.blade_mode
 				self:InitFeedbackControllers()
@@ -101,17 +98,7 @@ function ImmortalShipBase:overrideShipFrameCustomProtocols()
 				local angle = vector.new(arg.angular.x,arg.angular.y,arg.angular.z)
 				ImmortalShipBase.remote_move_angular = angle
 			end,
-
-			default = function ( )
-				print(textutils.serialize(command)) 
-				print("ImmortalShipBase: default case executed")
-			end,
 		}
-		if case[command] then
-		 case[command](msg.args)
-		else
-		 case["default"]()
-		end
 	end
 end
 ImmortalShipBase.remote_move_linear = vector.new(0,0,0)
