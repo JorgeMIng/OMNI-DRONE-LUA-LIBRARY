@@ -8,6 +8,10 @@ local getLocalPositionError = flight_utilities.getLocalPositionError
 local clamp_vector3 = utilities.clamp_vector3
 
 
+local Call = require "lib.dir_test"
+
+local P = Call()
+--P.build()
 
 
 local DroneBaseClassKontraption = DroneBaseClassSP:subclass()
@@ -23,6 +27,8 @@ end
 function DroneBaseClassKontraption:init(instance_configs)
 
     self:initMovementPeripherals()
+
+    self.checking="hey you found me"
     
 	local configs = instance_configs
 
@@ -47,17 +53,20 @@ function DroneBaseClassKontraption:init(instance_configs)
         pos=vector.new(2,2,2),
         neg=vector.new(2,2,2)
     }
-    configs.ship_constants_config.DRONE_TYPE = "TURRET"
+    configs.ship_constants_config.DRONE_TYPE = configs.ship_constants_config.DRONE_TYPE or "DEFAULT"
 
     configs.ship_constants_config.IONTHRUST_CONFIG = configs.ship_constants_config.IONTHRUST_CONFIG or 4
     
 	DroneBaseClassKontraption.superClass.init(self,configs)
 
     local msg="hello world"
-    print("what",self.ship_constants.DRONE_ID)
-    print(self.remoteControlManager)
+    
+    
     self:debugProbe({msg})
-    print("settings",self.remoteControlManager:getSettings().master_player)
+
+    
+    --print("settings",self:getSettingsDrone().master_player)
+    --print("settings",self.remoteControlManager:getSettings().master_player)
     
 
     --if self.sensors.radars:getRadarTarget("PLAYER",false) then
@@ -119,12 +128,14 @@ function DroneBaseClassKontraption:powerThrusters(power)
 end
 
 function DroneBaseClassKontraption:calculateMovement()
+    
     self:initFlightConstants()
     self:initFeedbackControllers()
     self:customPreFlightLoopBehavior()
     local customFlightVariables = self:customPreFlightLoopVariables()
 
     while self.run_firmware do
+        
         if(self.ship_mass ~= self.sensors.shipReader:getMass()) then
 			self:initFlightConstants()
 		end
@@ -138,7 +149,15 @@ function DroneBaseClassKontraption:calculateMovement()
         self.ship_rotation = self:getOffsetDefaultShipOrientation(self.ship_rotation)
   
         local new_rot = self.target_rotation*self:getOffsetDefaultShipOrientation(quaternion.new(1,0,0,0)):inv()
-        self.shipControl.setRotation(new_rot[2],new_rot[3],new_rot[4],new_rot[1])
+        
+        if (math.abs(quaternion.Dot(new_rot,new_rot)-1)<0.01) then
+            self.shipControl.setRotation(new_rot[2],new_rot[3],new_rot[4],new_rot[1])
+        else
+            print("WHAT THE FUCK",new_rot:tostring_f())
+            print("INVALID QUATERNION")
+        end
+        
+        
 		
         self.ship_global_position = self.sensors.shipReader:getWorldspacePosition()
 		self.ship_global_position = vector.new(self.ship_global_position.x,self.ship_global_position.y,self.ship_global_position.z)

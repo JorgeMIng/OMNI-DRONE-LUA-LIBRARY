@@ -61,4 +61,35 @@ function Object:instanceof(class)
     return false
 end
 
+function Object:serialize()
+    local data = {
+        class = self.class,      -- Guardamos la referencia a la clase
+        variables = {}           -- Aquí guardamos las variables de la instancia
+    }
+
+    -- Copiar las variables de la instancia (no las funciones)
+    for key, value in pairs(self) do
+        if type(value) ~= "function" then
+            data.variables[key] = value
+        end
+    end
+
+    return textutils.serialize(data)
+end
+
+-- Función para deserializar una instancia
+function Object.deserialize(serializedData)
+    local data = textutils.unserialize(serializedData)
+
+    -- Crear la nueva instancia usando la clase guardada
+    local instance = new(data.class)
+
+    -- Restaurar las variables
+    for key, value in pairs(data.variables) do
+        instance[key] = value
+    end
+
+    return instance
+end
+
 return Object

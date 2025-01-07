@@ -594,4 +594,8 @@ function Quaternion:tostring()
 	return string.format("<%d,%d,%d,%d>",self[1],self[2],self[3],self[4])
 end
 
+function Quaternion:tostring_f()
+	return string.format("<%f,%f,%f,%f>",self[1],self[2],self[3],self[4])
+end
+
 return Quaternion

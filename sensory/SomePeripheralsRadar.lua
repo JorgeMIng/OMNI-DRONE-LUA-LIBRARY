@@ -164,9 +164,9 @@ function SomePeripheralsRadar:Targeting(arguments)
 						end
 					else
 						if (type(scanned_targets) == "table") then
-							print("working")
+							
 							for i,trg in ipairs(scanned_targets) do
-								print("Detected",trg.nickname)
+								
 								if (tostring(trg.nickname) == tostring(self.designated_player_name)) then
 									return trg
 								end

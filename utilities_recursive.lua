@@ -1,5 +1,5 @@
-utilities_recursive = {}
-
+local Object = require "lib.object.Object"
+local utilities_recursive = {}
 --[[
 
 This is a recursive switch that get cases from the hierarchy tree from child class to base class and would execute 
@@ -11,15 +11,15 @@ In case no default case or default func is setup the function would not execute 
 If any default is executed "wasDefault" of the result table is True
 
 
-* rec_switch_custum (command,getCasesFunc,callerClass,baseClass,
+* rec_switch_custum (command,getCasesFunc,callerClass,
 
     configsGetCases={protected_cases Default:{}, conservedOld Default:true, defaultFunc:false}
 * command: command code to execute
 * args: args to use in command
 * getCasesFunc: String with the name of the function to call for getting the cases in the specific subclass
 * callerClass: in most cases use self it would be the class calling this method which will be use as starting point 
-    for the the recursive switch checking superClasses until reaching the baseClass
-* baseClass: this class will have implemented a "build" method calling this function and using his class name
+    for the the recursive switch checking superClasses until reaching the ObjectClass
+
     this variable, subclasses of this method will be calling the specific getCasesFunc specified until reaching this class
 * configGetCases: table with config params
     - protected_cases: table with cases or function to get those cases.  This cases will be protected in case of same 
@@ -39,7 +39,7 @@ RETURNS
 This means that we can define a switch with custums cases and redifined cases of the base class if needed more easly
         Example: 
             BaseClass:
-                function Test:getCases(d)
+                function Test:getCases(class)
                     {
                         ["hush"] = function (args) --kill command
                             self:resetRedstone()
@@ -50,18 +50,17 @@ This means that we can define a switch with custums cases and redifined cases of
                             os.reboot()
                         end,
                         default = function ()
-                            self.remoteControlManager:protocols(msg)
-                            self:customProtocols(msg)
+                            # do something
                         end,
                     }
                 end 
 
                 function Test:build(d)
-                    Rec.rec_switch_custum("hush",args,"getCases",self,Test)
+                    Rec.rec_switch_custum("hush",args,"getCases",self)
                 end 
                 ///or//
                 function Test:build(d)
-                    Rec.rec_switch_custum("hush",args,"getCases",self,Test,{protected_cases={["hey"]=function()end},conservedOld=false,defaultFunc=function()end})
+                    Rec.rec_switch_custum("hush",args,"getCases",self,{protected_cases={["hey"]=function()end},conservedOld=false,defaultFunc=function()end})
                 end
             
             SubClass:
@@ -92,21 +91,21 @@ This means that we can define a switch with custums cases and redifined cases of
 
 
 
-function utilities_recursive.rec_switch_custum(command,args,getCasesFunc,callerClass,baseClass,configsGetCases)
+function utilities_recursive.rec_switch_custum(command,args,getCasesFunc,callerClass,configsGetCases)
     setmetatable(configsGetCases,{__index={protected_cases={},conservedOld=true,defaultFunc=false}})
     command = command and tonumber(command) or command
     local result
     local was_default=false
-    local case = utilities_recursive.rec_get_cases_custum(getCasesFunc,callerClass,baseClass,configsGetCases)
+    local case = utilities_recursive.rec_get_cases_custum(getCasesFunc,callerClass,configsGetCases)
 
     if case[command] then
-        result = case[command](args)
+        result = case[command](callerClass,args)
     elseif type(configsGetCases.defaultFunc)=="function" or case["default"] then
         was_default=true
         if type(configsGetCases.defaultFunc)=="function" then
-            result= configsGetCases.defaultFunc()
+            result= configsGetCases.defaultFunc(callerClass)
         else
-            result=case["default"]()
+            result=case["default"](callerClass,args)
         end
     else
         was_default=true
@@ -120,12 +119,10 @@ This class is used to get recursively cases defining a function to get cases, a 
 it would go from the caller class using superClass until base case combining the params get in each instance.
 
 
-* paramsGetCases (command,getCasesFunc,callerClass,baseClass, configsGetCases={protected_cases Default:{}, conservedOld Default:true }
+* paramsGetCases (command,getCasesFunc,callerClass, configsGetCases={protected_cases Default:{}, conservedOld Default:true }
 * getCasesFunc String with the name of the function to call for getting the cases in the specific subclass
 * callerClass in most cases use self it would be the class calling this method which will be use as starting point 
-    for the the recursive switch checking superClasses until reaching the baseClass
-* baseClass this class will have implemented a "build" method calling this function and using his class name
-    this variable, subclasses of this method will be calling the specific getCasesFunc specified until reaching this class
+    for the the recursive switch checking superClasses until reaching the ObjectClass
 * configGetCases table with config params
     - protected_cases: table with cases or function to get those cases.  This cases will be protected in case of same 
         key in the final cases table
@@ -158,12 +155,12 @@ This means that we can define a switch with custums cases and redifined cases of
                 end 
 
                 function Test:build(d)
-                    Rec.rec_get_cases_custum("getCases",self,Test,{})
+                    Rec.rec_get_cases_custum("getCases",self,{})
                 end 
 
                 ///or//
                 function Test:build(d)
-                    Rec.rec_switch_custum("getCases",self,Test,{protected_cases={["hey"]=function()end},conservedOld=false})
+                    Rec.rec_switch_custum("getCases",self,{protected_cases={["hey"]=function()end},conservedOld=false})
                 end
             
             SubClass:
@@ -189,7 +186,7 @@ This means that we can define a switch with custums cases and redifined cases of
 
 
 ]]--
-function utilities_recursive.rec_get_cases_custum(getCasesFunc,callerClass,baseClass,configsGetCases)
+function utilities_recursive.rec_get_cases_custum(getCasesFunc,callerClass,configsGetCases)
     setmetatable(configsGetCases,{__index={protected_cases={},conservedOld=true}})
     
     local class=callerClass
@@ -202,27 +199,20 @@ function utilities_recursive.rec_get_cases_custum(getCasesFunc,callerClass,baseC
     end
 
         
-    while(baseClass~=class) do
-        local params = class[getCasesFunc]()
-        
+    while(class ~= Object) do
+        if class[getCasesFunc] then
+            local params = class[getCasesFunc](class)
+            params_global = utilities_recursive.combined_params(params,params_global,configsGetCases.conservedOld)
 
+        end
+        
         class = class.superClass
-        params_global = utilities_recursive.combined_params(params,params_global,configsGetCases.conservedOld)
-
         
-       
-
     end
-
-    local paramsBase = baseClass[getCasesFunc]()
-    params_global = utilities_recursive.combined_params(paramsBase,params_global,configsGetCases.conservedOld)
-
-    
 
     -- setup protected params
     
     params_global = utilities_recursive.combined_params(configsGetCases.protected_cases,params_global,false)
-    
     return params_global
 end
 

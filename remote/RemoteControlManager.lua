@@ -1,25 +1,25 @@
 local Object = require "lib.object.Object"
 
+local Rec = require "lib.utilities_recursive"
+
 local RemoteControlManager = Object:subclass()
 
 --OVERRIDABLE FUNCTIONS--
 function RemoteControlManager:getProtocols()
 	return {
 	
-	["set_settings"] = function (msg)
-		if (tostring(msg.drone_type) == tostring(self.DRONE_TYPE)) then
-			self:setSettings(msg.args)
-		end
+	["set_settings"] = function (class,args)
+			self:setSettings(args)
 	end,
 	["get_settings_info"] = function (args)
 		self:transmitCurrentSettingsToController()
 	end,
-	 ["default"] = function ( )
+	 ["default"] = function (self)
 	end
 	}
 end
 
-function RemoteControlManager:getCustomSettings()
+function RemoteControlManager:getCustomSettingsTemp()
 	return {}
 end
 
@@ -29,8 +29,11 @@ function RemoteControlManager:getSettings()
 		dynamic_positioning_mode = self.rc_variables.dynamic_positioning_mode,
 		player_mounting_ship = self.rc_variables.player_mounting_ship,
 	}
+
 	
-	local custom_settings = self:getCustomSettings()
+	local custom_settings = self:getCustomSettingsTemp()
+
+	Rec.combined_params(custom_settings,rcd_settings,false)
 	
 	for key,value in pairs(custom_settings) do
 		--print(key,value)
@@ -52,7 +55,7 @@ end
 
 
 function RemoteControlManager:protocols(msg)
-	return Rec.rec_switch_custum(msg.cmd,msg.args,"getProtocols",self,RemoteControlManager,{conservedOld=true,protected_cases={},defaultFunc={}})
+	return Rec.rec_switch_custum(msg.cmd,msg.args,"getProtocols",self,{conservedOld=true,protected_cases={},defaultFunc={}})
 end
 
 function RemoteControlManager:init(configs)--
@@ -79,7 +82,9 @@ end
 function RemoteControlManager:transmitCurrentSettingsToController()
 	print("transmitCurrentSettingsToController")
 	
-	local msg = {drone_ID=self.DRONE_ID,protocol="drone_settings_update",partial_profile={settings=self:getSettings(),drone_type=self.DRONE_TYPE}}
+	local settings=self:getSettings()
+	local msg = {drone_ID=self.DRONE_ID,protocol="drone_settings_update",partial_profile={settings=settings,drone_type=self.DRONE_TYPE}}
+
 	self:transmitToController(msg)
 end
 

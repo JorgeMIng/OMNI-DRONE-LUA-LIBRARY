@@ -5,8 +5,6 @@ local targeting_utilities = require "lib.targeting_utilities"
 local player_spatial_utilities = require "lib.player_spatial_utilities"
 local flight_utilities = require "lib.flight_utilities"
 local RemoteControlManager = require "lib.remote.RemoteControlManager"
-
-
 local Rec = require "lib.utilities_recursive"
 
 
@@ -56,7 +54,7 @@ end
 function DroneBaseClass:getProtocols()
 	
 	return {
-		["scroll_aim_target"] = function (arguments)
+		["scroll_aim_target"] = function (self,arguments)
 			if (self:getAutoAim()) then
 				if (arguments.args>0) then
 					self:scrollUpShipTargets()
@@ -67,55 +65,97 @@ function DroneBaseClass:getProtocols()
 				end
 			end
 		end,
-		["run_mode"] = function (mode)
-			self.rc_variables.run_mode = mode
+		["run_mode"] = function (self,mode)
+			self.remoteControlManager.rc_variables.run_mode = mode
 		end,
 		
-		["auto_aim"] = function (mode)
+		["auto_aim"] = function (self,mode)
 			self:setAutoAim(mode)
 		end,
-		["use_external_radar"] = function (args)
+		["use_external_radar"] = function (self,args)
 			self:useExternalRadar(args.is_aim,args.mode)
 		end,
-		["set_target_mode"] = function (args)
-			--print("set_target_mode:", args.is_aim,args.mode)
+		["set_target_mode"] = function (self,args)
+			print("set_target_mode:", args.is_aim,args.mode)
 			self:setTargetMode(args.is_aim,args.mode)
 			--print("getTargetMode:", self:getTargetMode(false))
 		end,
-		["designate_to_player"] = function (designation)
+		["designate_to_player"] = function (self,designation)
 			self:setDesignatedMaster(true,designation)
 		end,
-		["designate_to_ship"] = function (designation)
+		["designate_to_ship"] = function (self,designation)
 			self:setDesignatedMaster(false,designation)
 		end,
-		["add_to_whitelist"] = function (args)
+		["add_to_whitelist"] = function (self,args)
 			self:addToWhitelist(args.is_player,args.designation)
 		end,
-		["remove_from_whitelist"] = function (args)
+		["remove_from_whitelist"] = function (self,args)
 			self:removeFromWhitelist(args.is_player,args.designation)
 		end,
-		["realign"] = function (args)
+		["realign"] = function (self,args)
 			self.target_rotation = quaternion.fromRotation(vector.new(0,1,0), 0)
 		end,
-		["hush"] = function (args) --kill command
+		["hush"] = function (self,args) --kill command
+			print("FJUCCCCCCCCCCCCCCC")
 			self:resetRedstone()
 			self.run_firmware = false
 		end,
-		["restart"] = function (args) --kill command
+		["restart"] = function (self,args) --kill command
 			self:resetRedstone()
 			os.reboot()
 		end,
-		["dynamic_positioning_mode"] = function (mode)
-			self.rc_variables.dynamic_positioning_mode = mode
+		["dynamic_positioning_mode"] = function (self,mode)
+			self.remoteControlManager.rc_variables.dynamic_positioning_mode = mode
 		end,
-		["player_mounting_ship"] = function (mode)
-			self.rc_variables.player_mounting_ship = mode
+		["player_mounting_ship"] = function (self,mode)
+			self.remoteControlManager.rc_variables.player_mounting_ship = mode
 		end,
-		["orbit_offset"] = function (pos_vec)
-			self.rc_variables.orbit_offset = pos_vec
+		["orbit_offset"] = function (self,pos_vec)
+			self.remoteControlManager.rc_variables.orbit_offset = pos_vec
 		end,
-		["default"] = function ()
-			--print("default was executed")
+		["default"] = function (self)
+			print("default was executed")
+		end
+		}
+end
+
+function DroneBaseClass:redirectMessege(args,reply_info)
+	local senderChannel=self.com_channels.REPLY_DUMP_CHANNEL
+
+	local reply_message={sender_id=args.sender_id,id=ship.getId(),msg={cmd=reply_info.protocol,args=reply_info.message}}
+	if args.channel ==self.com_channels.REMOTE_TO_DRONE_CHANNEL then
+		senderChannel= self.com_channels.DRONE_TO_REMOTE_CHANNEL
+		--print("secret",args.sender_id)
+		reply_message={reply_id=args.sender_id,drone_ID=ship.getId(),protocol=reply_info.protocol,args=reply_info.message}
+	end
+
+	if args.channel ==self.com_channels.DEBUG_TO_DRONE_CHANNEL then
+		senderChannel= self.com_channels.DRONE_TO_DEBUG_CHANNEL
+	end
+
+	if args.channel ==self.com_channels.DRONE_TO_DRONE_CHANNEL then
+		senderChannel= self.com_channels.DRONE_TO_DRONE_CHANNEL
+		reply_message={drone_id=args.sender_id,id=ship.getId(),msg={cmd=reply_info.protocol,args=reply_info.message}}
+	end
+	
+	self.modem.transmit(senderChannel,self.com_channels.REPLY_DUMP_CHANNEL,reply_message)
+end
+
+
+
+
+function DroneBaseClass:getBroadcastProtocols()
+	
+	return {
+		["ping"] = function (self,args)
+			
+			self:redirectMessege(args,{protocol="reply_ping",message={id=ship.getId(),drone_type=self.remoteControlManager.DRONE_TYPE}})
+			
+		end,
+		
+		
+		["default"] = function (self)
+			print("default was executed")
 		end
 		}
 end
@@ -175,6 +215,77 @@ function DroneBaseClass:init(configs)
 	self:addTargetingSystemThreads()
 end
 
+
+function DroneBaseClass:getCustomSettings()
+
+	return {
+		
+		orbit_offset = function (self) return self.remoteControlManager.rc_variables.orbit_offset end,
+		dynamic_positioning_mode = function (self) return self.remoteControlManager.rc_variables.dynamic_positioning_mode end,
+		player_mounting_ship = function (self) return self.remoteControlManager.rc_variables.player_mounting_ship end,
+		run_mode = function (self) return self.remoteControlManager:getRunMode()end,
+		auto_aim = function (self) return self:getAutoAim() end,
+		use_external_aim = function (self) return self:isUsingExternalRadar(true)end,
+		use_external_orbit = function (self) return self:isUsingExternalRadar(false)end,
+		aim_target_mode = function (self) return self:getTargetMode(true)end,
+		orbit_target_mode = function (self) return self:getTargetMode(false)end,
+		master_player = function (self) return self.sensors:getDesignatedMaster(true)end,
+		master_ship= function (self)  return  self.sensors:getDesignatedMaster(false) end,
+	}
+end
+
+function DroneBaseClass:setCustomSettings()
+	return {
+		auto_aim = function(self,new_setting,new_settings) self:setAutoAim(new_setting) end,
+		use_external_aim = function(self,new_setting,new_settings)  self:useExternalRadar(true,new_setting)end,
+		use_external_orbit = function(self,new_setting,new_settings)  self:useExternalRadar(false,new_setting)end,
+		aim_target_mode = function(self,new_setting,new_settings) self:setTargetMode(true,new_settings.aim_target_mode)end,
+		orbit_target_mode = function(self,new_setting,new_settings) self:setTargetMode(false,new_settings.orbit_target_mode)end,
+		master_player = function(self,new_setting,new_settings) self:setDesignatedMaster(true,new_settings.master_player)end,
+		master_ship = function(self,new_setting,new_settings) self:setDesignatedMaster(false,new_settings.master_ship)end,
+	}
+
+end
+
+function DroneBaseClass:execute_protocol(protocol,args)
+	
+	
+	Rec.rec_switch_custum(protocol,args,"getProtocols",self,{conservedOld=true,protected_cases=self.remoteControlManager:getProtocols(),defaultFunc={}})
+end
+
+
+function DroneBaseClass:getSettingsDrone()
+	
+	local custom_cases = Rec.rec_get_cases_custum("getCustomSettings",self,{conservedOld=true,protected_cases={}})
+	
+	for key,_ in pairs(custom_cases) do
+		custom_cases[key]=custom_cases[key](self)
+	end
+
+	return custom_cases
+end
+
+
+function DroneBaseClass:setSettingsDrone(new_settings)
+
+	local setter_funcs = Rec.rec_get_cases_custum("setCustomSettings",self,{conservedOld=true,protected_cases={}})
+
+	--setting the variables by executing the funcs || now we can re-implemente more easily the functs
+	for var_name,new_setting in pairs(new_settings) do
+		
+		if setter_funcs[var_name] and new_setting~=nil then
+			--print(var_name,new_setting,"|")
+			setter_funcs[var_name](self,new_setting,new_settings)
+		end
+		-- change to a function of remotecontroler manager TODO
+		if (self.remoteControlManager.rc_variables[var_name] ~= nil) then
+			self.remoteControlManager.rc_variables[var_name] = new_setting
+		end
+	end
+end
+
+
+
 function DroneBaseClass:initRemoteControl(config)
 	local dbc = self
 	
@@ -187,69 +298,50 @@ function DroneBaseClass:initRemoteControl(config)
 	config.rc_variables.run_mode = config.rc_variables.run_mode or false
 	config.modem = self.modem
 	
-	self.remoteControlManager = RemoteControlManager(config)
 	
+	
+	local dbc=self
 	
 
-	
-	function self.remoteControlManager:getSettings()
-
-		local rcd_settings = {
-			orbit_offset = self.rc_variables.orbit_offset,
-			dynamic_positioning_mode = self.rc_variables.dynamic_positioning_mode,
-			player_mounting_ship = self.rc_variables.player_mounting_ship,
-			run_mode = self:getRunMode(),
-					
-			auto_aim = dbc:getAutoAim(),
-			use_external_aim = dbc:isUsingExternalRadar(true),
-			use_external_orbit = dbc:isUsingExternalRadar(false),
-			aim_target_mode = dbc:getTargetMode(true),
-			orbit_target_mode = dbc:getTargetMode(false),
-			master_player = dbc.sensors:getDesignatedMaster(true),
-			master_ship = dbc.sensors:getDesignatedMaster(false),
-		}
-		
-		for key,value in pairs(self:getCustomSettings()) do
-			print(key,value)
-			rcd_settings[key] = value
-		end
-		
-		return rcd_settings
+	function RemoteControlManager:getSettings()
+		--local dbc=self
+		--print("TESTING",dbc.getSettingsDrone)
+		return dbc:getSettingsDrone()
 	end
 
-	function self.remoteControlManager:setSettings(new_settings)
-		for var_name,new_setting in pairs(new_settings) do
-			if (self.rc_variables[var_name] ~= nil) then
-				self.rc_variables[var_name] = new_setting
-			elseif (var_name == "auto_aim") then
-				dbc:setAutoAim(new_setting)
-			elseif (var_name == "use_external_aim") then
-				dbc:useExternalRadar(true,new_setting)
-			elseif (var_name == "use_external_orbit") then
-				dbc:useExternalRadar(false,new_setting)
-			elseif (var_name == "aim_target_mode") then
-				dbc:setTargetMode(true,new_settings.aim_target_mode)
-			elseif (var_name == "orbit_target_mode") then
-				dbc:setTargetMode(false,new_settings.orbit_target_mode)
-			elseif (var_name == "master_player") then
-				dbc:setDesignatedMaster(true,new_settings.master_player)
-			elseif (var_name == "master_ship") then
-				dbc:setDesignatedMaster(false,new_settings.master_ship)
-			end
-		end
+	function RemoteControlManager:setSettings(new_settings)
+		--print("TESTING_2",dbc.setSettingsDrone)
+
+		
+		return dbc:setSettingsDrone(new_settings)
 	end
-	
-	function self.remoteControlManager:setRunMode(mode)
+
+	--function RemoteControlManager:setLocalInstance(dbc,new)
+	--	self.dbc=dbc
+	--	print("TESTING INSTANCE",self.checking)
+	--end
+
+
+	function RemoteControlManager:setRunMode(mode)
 		self.rc_variables.run_mode = mode
 	end
 
-	function self.remoteControlManager:getRunMode()
+	function RemoteControlManager:getRunMode()
 		if(dbc:targetedPlayersAreUndetected()) then
 			return false
 		end
 		return self.rc_variables.run_mode
 	end
+
+	self.remoteControlManager = RemoteControlManager(config)
+	
+	--self.remoteControlManager.setLocalInstance(self)
 end
+
+
+
+
+
 
 function DroneBaseClass:initSensors(configs)
 	self.sensors = Sensors(configs)
@@ -266,8 +358,11 @@ function DroneBaseClass:initVariables()
 	self.run_firmware = true
 
 	self.ship_rotation = self.sensors.shipReader:getRotation(true)
+	
 	self.ship_rotation = quaternion.new(self.ship_rotation.w,self.ship_rotation.x,self.ship_rotation.y,self.ship_rotation.z)
+	
 	self.ship_rotation = self:getOffsetDefaultShipOrientation(self.ship_rotation)
+	
 	self.target_rotation = self.ship_rotation
 
 	self.ship_global_position = self.sensors.shipReader:getWorldspacePosition()
@@ -369,6 +464,7 @@ function DroneBaseClass:initModemChannels(channels_config)
 	self.com_channels = {
 		DEBUG_TO_DRONE_CHANNEL = 0,
 		DRONE_TO_DEBUG_CHANNEL = 0,
+		DRONE_TO_DRONE_CHANNEL = 0,
 		REMOTE_TO_DRONE_CHANNEL = 0,
 		DRONE_TO_REMOTE_CHANNEL = 0,
 		DRONE_TO_COMPONENT_BROADCAST_CHANNEL = 0,
@@ -437,6 +533,9 @@ function DroneBaseClass:setDesignatedMaster(is_player,designation)
 	self.sensors:setDesignatedMaster(is_player,designation)
 end
 
+
+
+
 function DroneBaseClass:addToWhitelist(is_player,designation)
 	self.sensors:addToWhitelist(is_player,designation)
 end
@@ -501,7 +600,7 @@ function DroneBaseClass:debugProbe(msg)--transmits to debug channel
 	self.modem.transmit(self.com_channels.DRONE_TO_DEBUG_CHANNEL, self.com_channels.REPLY_DUMP_CHANNEL, msg)
 end
 
-function DroneBaseClass:protocols(msg)
+function DroneBaseClass:protocols(messege,channel)
 	--[[
 		--SAMPLE: Transmit from controller to this drone
 		modem.transmit(
@@ -511,7 +610,42 @@ function DroneBaseClass:protocols(msg)
 			)
 	]]--
 	
-	return Rec.rec_switch_custum(msg.cmd,msg.args,"getProtocols",self,DroneBaseClass,{conservedOld=true,protected_cases=self.remoteControlManager:getProtocols(),defaultFunc={}})
+	
+	
+	if messege.msg.args == nil then
+		messege.msg.args={}
+	end
+	if type(messege.msg.args)=="table"then
+		if messege.id then
+			messege.msg.args.sender_id=messege.id
+		end
+		messege.msg.args.channel=channel
+	end
+	
+	if messege.msg.drone_type and self.remoteControlManager.DRONE_TYPE == messege.msg.drone_type then
+		return self:execute_protocol(messege.msg.cmd,messege.msg.args)
+	elseif not messege.msg.drone_type then
+		return self:execute_protocol(messege.msg.cmd,messege.msg.args)
+	end
+		
+end
+
+function DroneBaseClass:broadcast(messege,channel)
+	--[[
+		--SAMPLE: Transmit from controller to this drone
+		modem.transmit(
+			self.com_channels.REMOTE_TO_DRONE_CHANNEL, 
+			self.com_channels.DRONE_TO_REMOTE_CHANNEL,
+			{drone_id=drone,msg={cmd=cmd,args=args}}
+			)
+	]]--
+	if messege.id then
+		messege.msg.args.sender_id=messege.id
+	end
+	
+	messege.msg.args.channel=channel
+	
+	return Rec.rec_switch_custum(messege.msg.cmd,messege.msg.args,"getBroadcastProtocols",self,{conservedOld=true,defaultFunc={}})
 end
 	
 --COMMUNICATION FUNCTIONS--
@@ -531,14 +665,20 @@ function DroneBaseClass:receiveCommand()
 	]]--
 	while self.run_firmware do
 		local event, modemSide, senderChannel, replyChannel, message, senderDistance = os.pullEvent("modem_message")
-		if (senderChannel==self.com_channels.REMOTE_TO_DRONE_CHANNEL or senderChannel==self.com_channels.DEBUG_TO_DRONE_CHANNEL) then
+		if (senderChannel==self.com_channels.REMOTE_TO_DRONE_CHANNEL or senderChannel==self.com_channels.DEBUG_TO_DRONE_CHANNEL or senderChannel==self.com_channels.DRONE_TO_DRONE_CHANNEL) then
 			if (message) then
 				if (tostring(message.drone_id) == tostring(self.ship_constants.DRONE_ID)) then
 					--self:debugProbe({message.msg})
-					self:protocols(message.msg)
 					
+					self:protocols(message,senderChannel)	
 					
 				end
+
+				
+				if (message.broadcast == 1)then
+					self:broadcast(message,senderChannel)
+				end
+				
 			end
 		end
 	end
@@ -566,6 +706,8 @@ function DroneBaseClass:initPID(max_lin_acc,max_ang_acc)
 end
 
 function DroneBaseClass:calculateMovement()
+
+
 	
 	local min_time_step = 0.05 --how fast the computer should continuously loop (the max is 0.05 for ComputerCraft)
 	local ship_mass = self.sensors.shipReader:getMass()
