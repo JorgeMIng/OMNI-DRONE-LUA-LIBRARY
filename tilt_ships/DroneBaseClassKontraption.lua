@@ -153,7 +153,7 @@ function DroneBaseClassKontraption:calculateMovement()
         if (math.abs(quaternion.Dot(new_rot,new_rot)-1)<0.01) then
             self.shipControl.setRotation(new_rot[2],new_rot[3],new_rot[4],new_rot[1])
         else
-            print("WHAT THE FUCK",new_rot:tostring_f())
+            --print("WHAT THE FUCK",new_rot:tostring_f())
             print("INVALID QUATERNION")
         end
         

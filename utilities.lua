@@ -62,12 +62,6 @@ end
 
 
 
---[[
--- fast but we can do without it returning 0
-function sign(x)
-  return x>0 and 1 or x<0 and -1 or 0
-end
-]]--
 
 function utilities.table_to_vector(vector_input)
 

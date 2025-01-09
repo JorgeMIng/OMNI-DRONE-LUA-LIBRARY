@@ -50,7 +50,7 @@ local DroneBaseShape = ShipFrameController:subclass()
 function DroneBaseShape:getOffsetDefaultShipOrientation(default_ship_orientation)
 	local angle_offset = self.angle_offset or 0
 	angle_offset = -90 + angle_offset
-	return quaternion.fromRotation(default_ship_orientation:localPositiveY(), angle_offset)*default_ship_orientation -- Rotates the default orientation so that the nose of the ship is aligned with it's local +X axis
+	return quaternion.fromRotation(default_ship_orientation:localPositiveY(),angle_offset)*default_ship_orientation -- Rotates the default orientation so that the nose of the ship is aligned with it's local +X axis
 end
 
 
@@ -101,6 +101,7 @@ function DroneBaseShape:TrilaterationRequest(radar_targets)
 		if self:ValidTrilaterationReq(ship_entity.id) then
 			local time = os.clock()
 			local relative_pos = self.ShipFrame.ship_global_position:sub(self.ShipFrame.coordinate_center)
+			relative_pos = self.rotate_coords(relative_pos,self.ShipFrame.angle_offset)
 			
 			local is_master= ship.getId()==tonumber(self.ShipFrame.sensors:getDesignatedMaster(false))
 			
@@ -111,6 +112,26 @@ function DroneBaseShape:TrilaterationRequest(radar_targets)
 
 	end
 
+
+end
+
+
+function DroneBaseShape:ShufflePos()
+	local bounder = self.ShipFrame.boundaries
+
+	local center_bounder = bounder[1]
+	local offset_bonder_max=bounder[2]
+	local offset_bounder_min=bounder[3]
+	
+	local corner = center_bounder:add(offset_bounder_min)
+	local height = offset_bonder_max.y-offset_bounder_min.y
+	local widthX = offset_bonder_max.x-offset_bounder_min.x
+	local widthZ = offset_bonder_max.z-offset_bounder_min.z
+	local random_pos = vector.new(math.random(0,widthX),math.random(0,height),math.random(0,widthZ))
+	
+	local new_pos = corner:add(random_pos)
+
+	return new_pos
 
 end
 
@@ -133,6 +154,9 @@ function DroneBaseShape:getProtocols()
 
 		["stop_drone"] = function (self,mode)
 			self.stop_drone=mode
+			if mode then
+				self.objective_global_position=self.ship_global_position
+			end
 		end,
 		
 		["objective_pos"] = function (self,pos) 
@@ -169,6 +193,8 @@ function DroneBaseShape:getProtocols()
 			
 			if self.experiment_online then
 				self.drone_state="W_SHUFFLE"
+				self.angle_offset=0
+
 			else
 				self.drone_state="MV_"..self.movement_mode
 				
@@ -223,6 +249,10 @@ function DroneBaseShape:getProtocols()
 				self.lost=true
 			end
 			self.started_experiment=false
+			local new_pos = self.controller:ShufflePos()
+			self.objective_global_position = new_pos
+			print(new_pos)
+			
 			self.drone_state="SHUFFLING"
 			
 			
@@ -237,6 +267,8 @@ function DroneBaseShape:getProtocols()
 			end
 			self.shuffling=false
 			self.started_experiment=true
+			self.coordinate_center=self.ship_global_position
+			self.angle_offset=math.random(0,360)
 			if self.lost then
 				self.drone_state="LOST"
 			else
@@ -260,6 +292,7 @@ function DroneBaseShape:getProtocols()
 			local time = os.clock()
 			--print("starting exchange from",args.sender_id)
 			local relative_pos = self.ship_global_position:sub(self.coordinate_center)
+			relative_pos = self.controller.rotate_coords(relative_pos,self.angle_offset)
 			
 			
 			local distance = utilities.vec_distance(args.real_pos,self.ship_global_position)
@@ -481,18 +514,53 @@ function DroneBaseShape:vec_distance_no_center(pos1,center1,pos2,center2)
 end
 
 
-function DroneBaseShape:fill_tri_history(avg_center,old_coordinate_center)
-	local rel_pos = self.ShipFrame.ship_global_position:sub(old_coordinate_center)
+function DroneBaseShape:fill_tri_history(avg_center,coordinate_center)
+	local real_pos= self.ShipFrame.ship_global_position
+	local rel_pos = real_pos:sub(coordinate_center)
+	rel_pos = self.rotate_coords(rel_pos,self.ShipFrame.angle_offset)
+	local new_pos = real_pos:sub(avg_center)
+	
 	if #self.trilateration_history==0 then
-		self.trilateration_history[1]={new=avg_center,center=old_coordinate_center,pos=rel_pos}
-		self.trilateration_history_idx=1
+		self.trilateration_history[1]={new=avg_center,center=coordinate_center,pos=rel_pos,new_pos=new_pos,real_pos=real_pos}
+		return false
+	end
+
+	local distance = utilities.vec_distance(self.trilateration_history[1].real_pos,real_pos)
+	
+	if distance > 4 then
+		self.trilateration_history[2]={new=avg_center,center=coordinate_center,pos=rel_pos,new_pos=new_pos,real_pos=real_pos}
+		return true
+	end
+	
+	
+	
+
+end
+
+function DroneBaseShape:deduce_ori()
+	if not self.offset_needed then
+		return 0
+	end
+	--print("hello",#self.trilateration_history)
+	if #self.trilateration_history==2 then
+		local data1=self.trilateration_history[self.trilateration_history_idx+1]
+		local data2=self.trilateration_history[math.fmod((self.trilateration_history_idx+1),2)+1]
+		
+		
+		local vec_rel = data2.pos - data1.pos
+		local vec_real = data2.new_pos - data1.new_pos
+		
+		local angle_vec = math.acos(vec_rel:dot(vec_real) / (vec_rel:length() * vec_real:length()))
+		if not angle_vec or tostring(angle_vec) == "nan" then
+			angle_vec=0
+		end
+		
+		return math.deg(angle_vec)
+		
+	else
 		return nil
 	end
-	local distance = self:vec_distance_no_center(self.trilateration_history[1].rel_pos,self.trilateration_history[1].center)
-	if distance > 2 then
-		self.trilateration_history[self.trilateration_history_idx]={new=avg_center,center=old_coordinate_center,pos=rel_pos}
-		self.trilateration_history_idx= math.fmod((self.trilateration_history_idx+1),2)
-	end
+
 
 end
 
@@ -504,7 +572,7 @@ function DroneBaseShape:trilateration_check()
 			-- do no change if you are master
 			self.ShipFrame.coordinate_center = utilities.table_to_vector(self.ShipFrame.master_coordinate_center)
 			self.lost=false
-			self.angle_offset=0
+			self.ShipFrame.angle_offset=0
 			return {}
 		end
 		
@@ -549,15 +617,37 @@ function DroneBaseShape:trilateration_check()
 
 		if avg_center and repeat_trilat then
 			-- stop global centergenerate average global_center
-			--self:fill_tri_history(avg_center,self.ShipFrame.coordinate_center)
+			local check = self:fill_tri_history(avg_center,self.ShipFrame.coordinate_center)
+			local angle_deduce=nil
+			if check then
+				angle_deduce = self:deduce_ori()
+				if angle_deduce<0 then
+					angle_deduce=angle_deduce+360
+				end
+				angle_deduce = math.mod(angle_deduce,360)
+				self.trilateration_history={}
+			end
+
+			if angle_deduce then
+				local diff_centers=self.ShipFrame.coordinate_center:sub(avg_center)
+				local new_angle = self.ShipFrame.angle_offset-angle_deduce
+				if new_angle<0 then
+					new_angle=new_angle+360
+				end
+				new_angle = math.mod(new_angle,360)
+				self.ShipFrame.angle_offset=new_angle
+
+				local start_de_rotated = self.rotate_coords(self.ShipFrame.start_objective_global_position,-angle_deduce)
+				self.ShipFrame.start_objective_global_position=start_de_rotated:add(diff_centers)
 
 
-			
-			local diff_centers=self.ShipFrame.coordinate_center:sub(avg_center)
-			self.ShipFrame.start_objective_global_position=self.ShipFrame.start_objective_global_position:add(diff_centers)
-			self.ShipFrame.objective_global_position=self.ShipFrame.objective_global_position:add(diff_centers)
-			self.ShipFrame.coordinate_center = avg_center
-			self.ShipFrame.lost=false
+				local obj_de_rotated=self.rotate_coords(self.ShipFrame.objective_global_position,-angle_deduce)
+				self.ShipFrame.objective_global_position=obj_de_rotated:add(diff_centers)
+				
+				self.ShipFrame.coordinate_center = avg_center
+				
+				self.ShipFrame.lost=false
+			end
 
 		elseif repeat_trilat then
 			self.ShipFrame.lost=true
@@ -616,6 +706,16 @@ function DroneBaseShape:gas_move(list,pos,radius)
 	return result_vector
 end
 
+function DroneBaseShape.rotate_coords(vec,angle_d)
+	
+	local angle= math.rad(angle_d)
+	local s = math.sin(angle)
+	local c = math.cos(angle)
+	vec.x= vec.x*c+vec.z*s
+	vec.z= -vec.x*s+vec.z*c
+	return vec
+end
+
 
 function DroneBaseShape:customFlightLoopBehavior(customFlightVariables)
 
@@ -625,10 +725,15 @@ function DroneBaseShape:customFlightLoopBehavior(customFlightVariables)
 	self.target_rotation = quaternion.fromToRotation(self.target_rotation:localPositiveY(),vector.new(0,1,0))*self.target_rotation
 	self.target_rotation = (quaternion.fromRotation(self.target_rotation:localPositiveY(),0)*self.target_rotation):normalize()-- uncomment to flip ship upside down
 	
-	--print("fuck",self.coordinate_center)
-	local target_pos = self.ship_global_position:sub(self.coordinate_center)
 	
-	--print("hfjdsfjds",target_pos)
+	local target_pos = self.ship_global_position:sub(self.coordinate_center)
+	self.target_global_position=self.ship_global_position
+
+	--local axis = vector.new(0, 1, 0)  -- Eje de rotación (en este caso, el eje Y)
+	--print("not rotated",target_pos)
+	target_pos = self.controller.rotate_coords(target_pos,self.angle_offset)
+	--print("rotated",target_pos)
+	
 	
 
 	if self.timer_trilateration_request:check() then
@@ -641,7 +746,7 @@ function DroneBaseShape:customFlightLoopBehavior(customFlightVariables)
 
 	if self.stop_drone then
 		--stop movement
-		
+		self.target_global_position=self.objective_global_position
 		return {}
 	end
 
@@ -652,7 +757,9 @@ function DroneBaseShape:customFlightLoopBehavior(customFlightVariables)
 
 		if self.shuffling then
 			-- go to shuffling positions
-			target_pos=self.objective_global_position
+			self.target_global_position=self.objective_global_position
+			return {}
+
 			
 		end
 
@@ -771,11 +878,11 @@ function DroneBaseShape:customFlightLoopBehavior(customFlightVariables)
 
 
 	
-
 	
 	
+	local target_world_coords = self.controller.rotate_coords(target_pos,-self.angle_offset)
 	
-	local target_world_coords = target_pos:add(self.coordinate_center)
+	target_world_coords = target_world_coords:add(self.coordinate_center)
 	
 	--print("error",target_world_coords)
 	-- clamp to bounaries
@@ -837,6 +944,7 @@ function DroneBaseShape:initCustom(customFlightVariables)
 
 	self.ShipFrame.angle_offset=0
 	self.trilateration_history_idx=0
+	self.offset_needed=true
 
 	self.ShipFrame.experiment_online=false
 	self.ShipFrame.drone_state="MV_STAY"
@@ -897,7 +1005,7 @@ function DroneBaseShape:initCustom(customFlightVariables)
 	self.ShipFrame.timer_trilateration:start()
 	
 
-	self.ShipFrame.boundaries ={vector.new(0,0,0),vector.new(100,160,100),vector.new(-100,10,-100)}
+	self.ShipFrame.boundaries ={vector.new(0,0,0),vector.new(100,150,100),vector.new(-100,10,-100)}
 
 	self.ShipFrame.trilateration_index=0
 	self.ShipFrame.trilateration_average_max=10
@@ -915,7 +1023,7 @@ function DroneBaseShape:initCustom(customFlightVariables)
 	self.trilateration_history={}
 
 	
-	
+
 	self.ShipFrame.target_global_position = self.ShipFrame.objective_global_position:add(self.ShipFrame.coordinate_center)
 	
 end
