@@ -38,9 +38,10 @@ end
 function DefaultFigure:init(figure_name_id,params)
 	self.figure_name_id = figure_name_id
     local params_metadata=self.params_to_check()
+    self.params_metadata=self.params_to_check()
     self:checkParams(params,params_metadata)
 	self:load_params(params)
-   
+    self.params=params
     
     DefaultFigure.superClass.init(self)
 
@@ -53,6 +54,15 @@ function DefaultFigure:load_params(params)
         self[key]=value
     end
 end
+
+function DefaultFigure:set_params(params)
+
+    self:checkParams(params,self.params_metadata)
+	self:load_params(params)
+    self.params=params
+    
+end
+
 ---------------------------- NOT OVERRIDE --------------------
 function DefaultFigure:checkParams(params,params_metadata)
 

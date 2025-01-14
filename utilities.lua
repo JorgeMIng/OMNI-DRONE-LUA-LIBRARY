@@ -68,93 +68,220 @@ function utilities.table_to_vector(vector_input)
 	return vector.new(utilities.round(vector_input.x),utilities.round(vector_input.y),utilities.round(vector_input.z))
 end
 
+
+
+
 local function trilaterate(A, B, C)
     local a2b = B.vPosition - A.vPosition
     local a2c = C.vPosition - A.vPosition
+	local result=nil
 
-
+    local r1=A.nDistance
+    local r2=B.nDistance
+    local r3=C.nDistance
+    --local r4=D.nDistance
 	
 
 
-    if math.abs(a2b:normalize():dot(a2c:normalize())) > 0.999 then
-        return nil
-		
-    end
-
-    local d = a2b:length()
-    local ex = a2b:normalize( )
-    local i = ex:dot(a2c)
-    local ey = (a2c - ex * i):normalize()
-    local j = ey:dot(a2c)
+	local ex =a2b:normalize()
+	local i = ex:dot(a2c)
+	local ey = (a2c - ex * i):normalize()
+	local j = ey:dot(a2c)
     local ez = ex:cross(ey)
+	local d = a2b:length()
 
-    local r1 = A.nDistance
-    local r2 = B.nDistance
-    local r3 = C.nDistance
-
-	if math.abs(d)<0.1 then
+	if math.abs(d)<0.01 then
 		
 		return nil
 	end
 
-	if math.abs(j)<0.1 then
+	if math.abs(j)<0.01 then
 		return nil
 	end
+	
+	local x = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
+	
+    local y = ((r1 * r1 - r3 * r3 + i*i+ j * j) / (2 * j)) - ((i*x)/(j))
+	
+	local zSquared = r1 * r1 - x * x - y * y
+	
+	local term = A.vPosition + ex * x + ey * y
+	
+	
+	if zSquared>0 then
+		local z=math.sqrt(zSquared)
+		
+		local ans1=term + (ez * z)
+		
+    	local ans2=term + (ez * ((-1)* z))
 
-    local x = (r1 * r1 - r2 * r2 + d * d) / (2 * d)
-    local y = (r1 * r1 - r3 * r3 - x * x + (x - i) * (x - i) + j * j) / (2 * j)
+		--print("Two solutions",ans1,"||",ans2)
+
+		return {false,ans1:round(0.01),ans2:round(0.01)}
+		
+		--local dist1=(D.vPosition-ans1):length()
+		
+    	--local dist2=(D.vPosition-ans2):length()
+
+		
+		
+		--if math.abs(r4-dist1)<=math.abs(r4-dist2) then
+        --	result=ans1
+		--else
+			--result=ans2
+		--end
+		
+	else
+		result=term 
+	end
+
+	return {true,result:round(0.01)}
 	
 
-    local result = A.vPosition + ex * x + ey * y
 
-    local zSquared = r1 * r1 - x * x - y * y
-    if zSquared > 0 then
-        local z = math.sqrt(zSquared)
-        local result1 = result + ez * z
-        local result2 = result - ez * z
+end
 
-        local rounded1, rounded2 = result1:round(0.01), result2:round(0.01)
-        if rounded1.x ~= rounded2.x or rounded1.y ~= rounded2.y or rounded1.z ~= rounded2.z then
-            return rounded1, rounded2
-        else
-            return rounded1
-        end
+local function calcularDistancia(v1, v2)
+    return v1:sub(v2):length()
+end
+
+-- Función para calcular el gradiente del error en la posición estimada
+local function calcularGradiente(pos, vecinos)
+	local xp, yp, zp
+    local grad_x = 0
+    local grad_y = 0
+    local grad_z = 0
+
+	local xp, yp, zp = pos.x, pos.y, pos.z
+
+    for i, vecino in ipairs(vecinos) do
+        local xi, yi, zi, dPSi = vecino.relative_pos.x, vecino.relative_pos.y, vecino.relative_pos.z, vecino.distance
+		
+        local distanciaCalculada = utilities.vec_distance(pos,vecino.relative_pos)
+	
+        local error = distanciaCalculada - dPSi
+        
+       
+        grad_x = grad_x + 2 * error * (xp - xi) / distanciaCalculada
+        grad_y = grad_y + 2 * error * (yp - yi) / distanciaCalculada
+        grad_z = grad_z + 2 * error * (zp - zi) / distanciaCalculada
     end
-    return result:round(0.01)
+    
+    return vector.new(grad_x, grad_y, grad_z)
 end
 
 
-function utilities.trilateration(drone_list)
+local function descensoPorGradiente(vecinos, pos_inicial, beta, max_iteraciones, max_valor)
+    local pos = pos_inicial  -- pos es un vector inicial
+    local iteracion = 0
+    local tolerancia = 1e-6
+    
+    -- Establecemos un valor máximo para las coordenadas
+    max_valor = max_valor or 1000 -- Si no se proporciona, se usa un valor predeterminado
+
+    while iteracion < max_iteraciones do
+        -- Calcular el gradiente en la posición actual
+        local grad = calcularGradiente(pos, vecinos)
+        
+        -- Actualizar la posición usando el gradiente y el paso beta
+        pos = pos:sub(grad:mul(beta))
+        
+        -- Comprobar si la posición se ha desbordado
+        if pos:length() > max_valor then
+            print("La posición se ha desbordado, deteniendo el proceso.")
+            break
+        end
+        
+        -- Comprobar si la mejora es suficientemente pequeña (criterio de convergencia)
+        local errorTotal = 0
+        for _, vecino in ipairs(vecinos) do
+            local distanciaCalculada = utilities.vec_distance(pos, vecino.relative_pos)
+            errorTotal = errorTotal + (distanciaCalculada - vecino.distance)^2
+        end
+        
+        if errorTotal < tolerancia then
+            break
+        end
+        
+        iteracion = iteracion + 1
+    end
+    
+    -- Devuelve el resultado como un vector
+    return pos
+end
+
+
+
+function utilities.trilateration(drone_list,media)
 
 	local p1=utilities.table_to_vector(drone_list[1].relative_pos)
     local p2=utilities.table_to_vector(drone_list[2].relative_pos) 
-    local p3=utilities.table_to_vector(drone_list[3].relative_pos)  
+    local p3=utilities.table_to_vector(drone_list[3].relative_pos)
+	
+	
 
-	--print("fuck me ||p1||",p1,"||p2||",p2,"||p3||",p3)
-
+	
     local r1=drone_list[1].distance
     local r2=drone_list[2].distance
     local r3=drone_list[3].distance
+	
 
-	--print("fuck me",r1,r2,r3)
-
+	
 	local A ={vPosition=p1,nDistance=r1}
 	local B ={vPosition=p2,nDistance=r2}
 	local C ={vPosition=p3,nDistance=r3}
+	
 
-	--print("fuck",p1.x,p2.x,p3.x)
-
-	--implementation of computercraft trilaterate
+	
+	
 	
 	local result = trilaterate(A,B,C)
-
-
-	--print("fuck me",result)
+	local final_result=nil
 	
-	return result
+	if result[1] then
+		final_result= result[2]
+		
+	else
+		final_result= utilities.decide_correct_solution(result[2],result[3],drone_list,media)
+		
 	end
 
 	
+
+
+	if not final_result then
+		return final_result
+	end
+	
+	local beta = 0.1  -- Paso de actualización
+	local max_iteraciones = 20  -- Número máximo de iteraciones
+
+	-- Llamada al descenso por gradiente para ajustar la posición
+	local posicionFinal = descensoPorGradiente(drone_list, final_result, beta, max_iteraciones)
+	
+	return posicionFinal
+	end
+
+
+
+
+function utilities.decide_correct_solution(solutionA,solutionB,list,media)
+	
+	for idx = 3,#list,1 do
+		local rn = list[idx].distance
+		local dist1=(list[idx].relative_pos-solutionA):length()
+    	local dist2=(list[idx].relative_pos-solutionB):length()
+
+		if math.abs(rn-dist1)<=math.abs(rn-dist2) and math.abs(dist1-dist2)>2 then
+        	return solutionA
+		elseif math.abs(dist1-dist2)>2 then
+			return solutionB
+		end
+			
+	end
+	
+	return nil
+end
 
 
 function utilities.add_scalar(vec,scalar)

@@ -621,7 +621,7 @@ function DroneBaseClass:protocols(messege,channel)
 		end
 		messege.msg.args.channel=channel
 	end
-	
+	--print("my_id:",ship.getId())
 	if messege.msg.drone_type and self.remoteControlManager.DRONE_TYPE == messege.msg.drone_type then
 		return self:execute_protocol(messege.msg.cmd,messege.msg.args)
 	elseif not messege.msg.drone_type then

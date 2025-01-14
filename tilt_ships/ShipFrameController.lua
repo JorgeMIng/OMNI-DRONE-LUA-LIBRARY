@@ -148,7 +148,7 @@ end
 --overridden functions--
 -- Example of getProtocols
 function ShipFrameController:getProtocols()
-	return {["test"]=function () print("FUCK STUPID")end}
+	return {}
 	--[[
 	return 
 	{
@@ -251,6 +251,24 @@ function ShipFrameController:get_override_frame_funcs()
 	"communicateWithComponent",
 	"getCustomSettings",
 	"setCustomSettings"}
+end
+
+function ShipFrameController:addShipThread(threads)
+	local all_threads=threads
+	if type(threads)=="function" then
+		all_threads={threads}
+	end
+
+	if type(threads)=="table" or type(threads)=="function" then
+
+		for k,thread in pairs(all_threads) do
+			if type(thread)=="function" then
+			table.insert(self.ShipFrame.threads,thread)
+			--print("thread",#self.ShipFrame.threads)
+			end
+		end
+		
+	end
 end
 
 
